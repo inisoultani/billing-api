@@ -1,13 +1,14 @@
 package http
 
 import (
+	"billing-api/internal/service"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter() http.Handler {
+func NewRouter(billingService *service.BillingService) http.Handler {
 
 	r := chi.NewRouter()
 
@@ -22,8 +23,9 @@ func NewRouter() http.Handler {
 	})
 
 	r.Route("/loan", func(r chi.Router) {
-		r.Get("/{loanID}/outstanding", GetOutstanding)
-		r.Post("/{loanID}/payment", MakePayment)
+		h := NewHandler(billingService)
+		r.Get("/{loanID}/outstanding", h.GetOutstanding)
+		r.Post("/{loanID}/payment", h.MakePayment)
 	})
 
 	return r

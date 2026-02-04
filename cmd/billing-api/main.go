@@ -2,6 +2,8 @@ package main
 
 import (
 	billingApiHttp "billing-api/internal/http"
+	"billing-api/internal/infra/db"
+	"billing-api/internal/service"
 	"context"
 	"log"
 	"net/http"
@@ -13,9 +15,20 @@ import (
 
 func main() {
 
+	dsn := "postgres://billing:billing@localhost:5432/billing?sslmode=disable"
+
+	pool, err := db.NewPostgresPool(dsn)
+	if err != nil {
+		log.Fatal("Failed to connect to db : %v", err)
+	}
+
+	defer pool.Close()
+
+	billingService := service.NewBillingService(pool)
+
 	addr := ":8081"
 
-	router := billingApiHttp.NewRouter()
+	router := billingApiHttp.NewRouter(billingService)
 
 	server := &http.Server{
 		Addr:    addr,

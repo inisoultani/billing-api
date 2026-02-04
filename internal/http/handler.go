@@ -1,13 +1,26 @@
 package http
 
-import "net/http"
+import (
+	"billing-api/internal/service"
+	"net/http"
+)
 
-func GetOutstanding(w http.ResponseWriter, r *http.Request) {
+type Handler struct {
+	billingService *service.BillingService
+}
+
+func NewHandler(bs *service.BillingService) *Handler {
+	return &Handler{
+		billingService: bs,
+	}
+}
+
+func (h *Handler) GetOutstanding(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 	w.Write([]byte("api not implemented yet"))
 }
 
-func MakePayment(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 	w.Write([]byte("api not implemented yet"))
 }
