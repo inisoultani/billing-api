@@ -59,6 +59,51 @@ func (q *Queries) GetTotalPaidAmount(ctx context.Context, loanID int64) (int64, 
 	return total_paid, err
 }
 
+const insertLoan = `-- name: InsertLoan :one
+INSERT INTO loans (
+    principal_amount,
+    total_interest_amount,
+    total_payable_amount,
+    weekly_payment_amount,
+    total_weeks,
+    start_date
+  )
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, principal_amount, total_interest_amount, total_payable_amount, weekly_payment_amount, total_weeks, start_date, created_at
+`
+
+type InsertLoanParams struct {
+	PrincipalAmount     int64
+	TotalInterestAmount int64
+	TotalPayableAmount  int64
+	WeeklyPaymentAmount int64
+	TotalWeeks          int32
+	StartDate           pgtype.Date
+}
+
+func (q *Queries) InsertLoan(ctx context.Context, arg InsertLoanParams) (Loan, error) {
+	row := q.db.QueryRow(ctx, insertLoan,
+		arg.PrincipalAmount,
+		arg.TotalInterestAmount,
+		arg.TotalPayableAmount,
+		arg.WeeklyPaymentAmount,
+		arg.TotalWeeks,
+		arg.StartDate,
+	)
+	var i Loan
+	err := row.Scan(
+		&i.ID,
+		&i.PrincipalAmount,
+		&i.TotalInterestAmount,
+		&i.TotalPayableAmount,
+		&i.WeeklyPaymentAmount,
+		&i.TotalWeeks,
+		&i.StartDate,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const insertRepayment = `-- name: InsertRepayment :one
 INSERT INTO payments (loan_id, week_number, amount, paid_at)
 VALUES ($1, $2, $3, $4)
