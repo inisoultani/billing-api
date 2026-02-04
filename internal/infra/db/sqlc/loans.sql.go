@@ -12,14 +12,14 @@ import (
 )
 
 const getLastPaidWeek = `-- name: GetLastPaidWeek :one
-SELECT COALESCE(MAX(week_number), 0) AS last_paid_week
+SELECT COALESCE(MAX(week_number), 0)::BIGINT AS last_paid_week
 FROM payments
 WHERE loan_id = $1
 `
 
-func (q *Queries) GetLastPaidWeek(ctx context.Context, loanID int64) (interface{}, error) {
+func (q *Queries) GetLastPaidWeek(ctx context.Context, loanID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, getLastPaidWeek, loanID)
-	var last_paid_week interface{}
+	var last_paid_week int64
 	err := row.Scan(&last_paid_week)
 	return last_paid_week, err
 }
@@ -47,14 +47,14 @@ func (q *Queries) GetLoanByID(ctx context.Context, id int64) (Loan, error) {
 }
 
 const getTotalPaidAmount = `-- name: GetTotalPaidAmount :one
-SELECT COALESCE(SUM(amount), 0) AS total_paid
+SELECT COALESCE(SUM(amount), 0)::BIGINT AS total_paid
 FROM payments
 WHERE loan_id = $1
 `
 
-func (q *Queries) GetTotalPaidAmount(ctx context.Context, loanID int64) (interface{}, error) {
+func (q *Queries) GetTotalPaidAmount(ctx context.Context, loanID int64) (int64, error) {
 	row := q.db.QueryRow(ctx, getTotalPaidAmount, loanID)
-	var total_paid interface{}
+	var total_paid int64
 	err := row.Scan(&total_paid)
 	return total_paid, err
 }

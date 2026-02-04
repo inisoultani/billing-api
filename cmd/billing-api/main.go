@@ -17,9 +17,12 @@ func main() {
 
 	dsn := "postgres://billing:billing@localhost:5432/billing?sslmode=disable"
 
+	log.Printf("Try to establsing db connection...")
 	pool, err := db.NewPostgresPool(dsn)
 	if err != nil {
-		log.Fatal("Failed to connect to db : %v", err)
+		log.Fatalf("Failed to connect to db : %v", err)
+	} else {
+		log.Printf("Successfuly establsing db connection...")
 	}
 
 	defer pool.Close()
