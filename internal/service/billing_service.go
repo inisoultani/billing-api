@@ -1,6 +1,7 @@
 package service
 
 import (
+	"billing-api/internal/domain"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
@@ -37,12 +38,37 @@ type BillingService struct {
 	queries *sqlc.Queries
 }
 
+func mapLoan(l sqlc.Loan) *domain.Loan {
+	return &domain.Loan{
+		ID:                  l.ID,
+		PrincipalAmount:     l.PrincipalAmount,
+		TotalPayableAmount:  l.TotalPayableAmount,
+		WeeklyPaymentAmount: l.WeeklyPaymentAmount,
+		TotalWeeks:          int(l.TotalWeeks),
+		CreatedAt:           l.CreatedAt.Time,
+	}
+}
+
 // constructor
 func NewBillingService(pool *pgxpool.Pool) *BillingService {
 	return &BillingService{
 		pool:    pool,
 		queries: sqlc.New(pool),
 	}
+}
+
+/*
+GetLoan get loan detail based on id
+*/
+func (s *BillingService) GetLoan(ctx context.Context, loanID int64) (*domain.Loan, error) {
+
+	// load loan
+	loan, err := s.queries.GetLoanByID(ctx, loanID)
+	if err != nil {
+		return nil, ErrLoanNotFound
+	}
+
+	return mapLoan(loan), nil
 }
 
 /*
@@ -54,38 +80,40 @@ The assumptions (as allowed by the problem statement):
 - Weekly payment is calculated as total_payable / total_weeks.
 - The total payable amount must be evenly divisible by total_weeks; otherwise, loan creation fails.
 */
-func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) (*sqlc.Loan, error) {
+func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) (*domain.Loan, error) {
 
-	if input.PrincipalAmount <= 0 || input.TotalWeeks <= 0 {
-		return nil, ErrInvalidLoanTerms
-	}
+	return withTx(ctx, s.pool, func(tx pgx.Tx) (*domain.Loan, error) {
+		if input.PrincipalAmount <= 0 || input.TotalWeeks <= 0 {
+			return nil, ErrInvalidLoanTerms
+		}
 
-	// flat interest
-	totalInterest := int64(float64(input.PrincipalAmount) * input.AnnualInterestRate)
-	totalPayable := input.PrincipalAmount + totalInterest
+		// flat interest
+		totalInterest := int64(float64(input.PrincipalAmount) * input.AnnualInterestRate)
+		totalPayable := input.PrincipalAmount + totalInterest
 
-	if totalPayable%int64(input.TotalWeeks) != 0 {
-		return nil, errors.New("weekly payment is not evenly divisible")
-	}
+		if totalPayable%int64(input.TotalWeeks) != 0 {
+			return nil, errors.New("weekly payment is not evenly divisible")
+		}
 
-	weeklyPayment := totalPayable / int64(input.TotalWeeks)
+		weeklyPayment := totalPayable / int64(input.TotalWeeks)
 
-	loan, err := s.queries.InsertLoan(ctx, sqlc.InsertLoanParams{
-		PrincipalAmount:     input.PrincipalAmount,
-		TotalInterestAmount: totalInterest,
-		TotalPayableAmount:  totalPayable,
-		WeeklyPaymentAmount: weeklyPayment,
-		TotalWeeks:          int32(input.TotalWeeks),
-		StartDate: pgtype.Date{
-			Time:  input.StartDate,
-			Valid: true,
-		},
+		loan, err := s.queries.InsertLoan(ctx, sqlc.InsertLoanParams{
+			PrincipalAmount:     input.PrincipalAmount,
+			TotalInterestAmount: totalInterest,
+			TotalPayableAmount:  totalPayable,
+			WeeklyPaymentAmount: weeklyPayment,
+			TotalWeeks:          int32(input.TotalWeeks),
+			StartDate: pgtype.Date{
+				Time:  input.StartDate,
+				Valid: true,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return mapLoan(loan), nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &loan, nil
 }
 
 /*

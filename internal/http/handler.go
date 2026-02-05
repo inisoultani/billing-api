@@ -27,9 +27,17 @@ type submitPaymentRequest struct {
 }
 
 type submitLoanResponse struct {
-	LoanID        int64 `json:"loan_id"`
-	WeeklyPayment int64 `json:"weekly_payment"`
-	TotalPayable  int64 `json:"total_payable"`
+	LoanID              int64 `json:"loan_id"`
+	WeeklyPaymentAmount int64 `json:"weekly_payment_amount"`
+	TotalPayable        int64 `json:"total_payable"`
+}
+
+type detailLoanResponse struct {
+	LoanID              int64  `json:"loan_id"`
+	TotalPayable        int64  `json:"total_payable"`
+	WeeklyPaymentAmount int64  `json:"weekly_payment_amount"`
+	TotalWeeks          int    `json:"total_weeks"`
+	CreatedAt           string `json:"created_at"`
 }
 
 type outstandingResponse struct {
@@ -45,6 +53,28 @@ func NewHandler(bs *service.BillingService) *Handler {
 	return &Handler{
 		billingService: bs,
 	}
+}
+
+func (h *Handler) GetLoan(w http.ResponseWriter, r *http.Request) {
+	loanIDStr := chi.URLParam(r, "loanID")
+	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid loan id", http.StatusBadRequest)
+	}
+	loan, err := h.billingService.GetLoan(r.Context(), loanID)
+
+	resp := detailLoanResponse{
+		LoanID:              loan.ID,
+		WeeklyPaymentAmount: loan.WeeklyPaymentAmount,
+		TotalPayable:        loan.TotalPayableAmount,
+		TotalWeeks:          loan.TotalWeeks,
+		CreatedAt:           loan.CreatedAt.Format(time.RFC3339),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+
 }
 
 func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) {
@@ -72,9 +102,9 @@ func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := submitLoanResponse{
-		LoanID:        loan.ID,
-		WeeklyPayment: loan.WeeklyPaymentAmount,
-		TotalPayable:  loan.TotalPayableAmount,
+		LoanID:              loan.ID,
+		WeeklyPaymentAmount: loan.WeeklyPaymentAmount,
+		TotalPayable:        loan.TotalPayableAmount,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -104,6 +134,7 @@ func (h *Handler) GetOutstanding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
 
