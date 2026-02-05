@@ -263,9 +263,6 @@ func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now tim
 ListPayments return all payment records based on loan id
 */
 func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit int, cursor *domain.PaymentCursor) ([]*domain.Payment, *domain.PaymentCursor, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 10
-	}
 
 	params := sqlc.ListPaymentsByLoanIDParams{
 		LoanID:   loanID,

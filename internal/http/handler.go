@@ -1,6 +1,7 @@
 package http
 
 import (
+	"billing-api/internal/config"
 	"billing-api/internal/service"
 	"encoding/json"
 	"log"
@@ -13,11 +14,13 @@ import (
 
 type Handler struct {
 	billingService *service.BillingService
+	config         *config.Config
 }
 
-func NewHandler(bs *service.BillingService) *Handler {
+func NewHandler(bs *service.BillingService, cfg *config.Config) *Handler {
 	return &Handler{
 		billingService: bs,
+		config:         cfg,
 	}
 }
 
@@ -185,6 +188,9 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Invalid page limit number", http.StatusBadRequest)
 		return
+	}
+	if limit <= 0 || limit > h.config.PagingLimitMax {
+		limit = h.config.PagingLimitDefault
 	}
 
 	cursor, err := DecodeCursor(r)
