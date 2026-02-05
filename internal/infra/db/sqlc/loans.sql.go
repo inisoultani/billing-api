@@ -12,14 +12,14 @@ import (
 )
 
 const getLastPaidWeek = `-- name: GetLastPaidWeek :one
-SELECT COALESCE(MAX(week_number), 0)::BIGINT AS last_paid_week
+SELECT COALESCE(MAX(week_number), 0)::INT AS last_paid_week
 FROM payments
 WHERE loan_id = $1
 `
 
-func (q *Queries) GetLastPaidWeek(ctx context.Context, loanID int64) (int64, error) {
+func (q *Queries) GetLastPaidWeek(ctx context.Context, loanID int64) (int32, error) {
 	row := q.db.QueryRow(ctx, getLastPaidWeek, loanID)
-	var last_paid_week int64
+	var last_paid_week int32
 	err := row.Scan(&last_paid_week)
 	return last_paid_week, err
 }

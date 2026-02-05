@@ -38,6 +38,7 @@ type detailLoanResponse struct {
 	WeeklyPaymentAmount int64  `json:"weekly_payment_amount"`
 	TotalWeeks          int    `json:"total_weeks"`
 	CreatedAt           string `json:"created_at"`
+	IsDelinquent        bool   `json:"is_delinquent"`
 }
 
 type outstandingResponse struct {
@@ -73,12 +74,24 @@ func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// intentionally put isDelinquent as part of the loan detail rather than as a separated rest API
+	// considering :
+	// - avoiding complexity where frontend must call 2 endpoints
+	// - avoiding adding more latency
+	isDelinquent, err := h.billingService.IsDelinquent(r.Context(), loan.ID, time.Now())
+	if err != nil {
+		log.Printf("Failed to compute loan delinquency", err)
+		http.Error(w, "Failed to compute loan delinquency", http.StatusInternalServerError)
+		return
+	}
+
 	resp := detailLoanResponse{
 		LoanID:              loan.ID,
 		WeeklyPaymentAmount: loan.WeeklyPaymentAmount,
 		TotalPayable:        loan.TotalPayableAmount,
 		TotalWeeks:          loan.TotalWeeks,
 		CreatedAt:           loan.CreatedAt.Format(time.RFC3339),
+		IsDelinquent:        isDelinquent,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

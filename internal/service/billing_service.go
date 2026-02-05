@@ -196,3 +196,56 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		return payment.ID, nil
 	})
 }
+
+/*
+IsDelinquent check if the the loan currently in deliquent state or not
+
+Delinquency is currently modeled as a derived state, calculated on demand based on loan creation time and payment history.
+Intentionally not persisting delinquency at this stage to avoid consistency issues.
+As the system evolves (eg notifications, collections workflows, regulatory reporting),
+delinquency can be promoted to an explicit loan lifecycle state, managed via a state machine and updated through well-defined domain events.
+
+A loan is delinquent if:
+There is a gap of 2 or more weeks between:
+- the latest paid week
+- and the current expected week
+*/
+func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now time.Time) (bool, error) {
+	// load loan
+	loan, err := s.queries.GetLoanByID(ctx, loanID)
+	if err != nil {
+		return false, ErrLoanNotFound
+	}
+
+	// get loan last paid week
+	lastPaidWeek, err := s.queries.GetLastPaidWeek(ctx, loanID)
+	if err != nil {
+		return false, err
+	}
+
+	// the loan start date is assumed to be the loan creation timestamp, as the problem statement does not describe a separate approval or disbursement phase.
+	// if later such usecases are introduced in the future, we could use start_date field and used it later in the future for delinquency and repayment scheduling logic.
+	expectedWeek := weekSince(loan.CreatedAt.Time, now)
+
+	// loan either just started or not yet
+	if expectedWeek <= 1 {
+		return false, nil
+	}
+
+	gap := expectedWeek - int(lastPaidWeek)
+	return gap >= 2, nil
+}
+
+/*
+weekSince internal helper method to calculte week duration between 2 different time
+*/
+func weekSince(start, now time.Time) int {
+	if now.Before(start) {
+		return 0
+	}
+
+	duration := now.Sub(start)
+	weeks := int(duration.Hours() / (24 * 7))
+
+	return weeks + 1
+}
