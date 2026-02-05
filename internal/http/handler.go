@@ -1,9 +1,7 @@
 package http
 
 import (
-	"billing-api/internal/domain"
 	"billing-api/internal/service"
-	"encoding/base64"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -15,52 +13,6 @@ import (
 
 type Handler struct {
 	billingService *service.BillingService
-}
-
-type submitLoanRequest struct {
-	PrincipalAmount    int64   `json:"principal_amount"`
-	AnnualInterestRate float64 `json:"annual_interest_rate"`
-	TotalWeeks         int     `json:"total_weeks"`
-	StartDate          string  `json:"start_date"` // YYYY-MM-DD
-}
-
-type submitPaymentRequest struct {
-	Amount int64 `json:"amount"`
-}
-
-type submitLoanResponse struct {
-	LoanID              int64 `json:"loan_id"`
-	WeeklyPaymentAmount int64 `json:"weekly_payment_amount"`
-	TotalPayable        int64 `json:"total_payable"`
-}
-
-type detailLoanResponse struct {
-	LoanID              int64  `json:"loan_id"`
-	TotalPayable        int64  `json:"total_payable"`
-	WeeklyPaymentAmount int64  `json:"weekly_payment_amount"`
-	TotalWeeks          int    `json:"total_weeks"`
-	CreatedAt           string `json:"created_at"`
-	IsDelinquent        bool   `json:"is_delinquent"`
-}
-
-type outstandingResponse struct {
-	LoanID      int64 `json:"loan_id"`
-	Outstanding int64 `json:"outstanding"`
-}
-
-type submitPaymentResponse struct {
-	PaymentID int64 `json:"payment_id"`
-}
-
-type PaymentResponse struct {
-	WeekNumber int    `json:"week_number"`
-	Amount     int    `json:"amount"`
-	PaidAt     string `json:"paid_at"`
-}
-
-type ListPaymentResponse struct {
-	Payments   []PaymentResponse `json:"payments"`
-	NextCursor *string           `json:"next_cursor,omitempty"`
 }
 
 func NewHandler(bs *service.BillingService) *Handler {
@@ -235,7 +187,7 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cursor, err := decodeCursor(r)
+	cursor, err := DecodeCursor(r)
 	if err != nil {
 		http.Error(w, "Invalid cursor format", http.StatusBadRequest)
 		return
@@ -248,65 +200,16 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	encodedNextCursor, err := encodeCursor(nextCursor)
+	encodedNextCursor, err := EncodeCursor(nextCursor)
 	if err != nil {
 		log.Printf("Error encoding next cursor %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	resp := toListPaymentResponse(payments, encodedNextCursor)
+	resp := ToListPaymentResponse(payments, encodedNextCursor)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
-}
-
-func toListPaymentResponse(payments []*domain.Payment, nextCursor *string) ListPaymentResponse {
-	list := make([]PaymentResponse, len(payments))
-	for i, p := range payments {
-		list[i] = PaymentResponse{
-			WeekNumber: p.WeekNumber,
-			Amount:     int(p.Amount),
-			PaidAt:     p.PaidAt.Format(time.RFC3339),
-		}
-	}
-	return ListPaymentResponse{
-		Payments:   list,
-		NextCursor: nextCursor,
-	}
-}
-
-func decodeCursor(r *http.Request) (*domain.PaymentCursor, error) {
-	encodedCursor := r.URL.Query().Get("cursor")
-	if encodedCursor == "" {
-		return nil, nil
-	}
-
-	decodedCursor, err := base64.RawURLEncoding.DecodeString(encodedCursor)
-	if err != nil {
-		return nil, err
-	}
-
-	var cursor domain.PaymentCursor
-	if err := json.Unmarshal(decodedCursor, &cursor); err != nil {
-		return nil, err
-	}
-
-	return &cursor, nil
-}
-
-func encodeCursor(cursor *domain.PaymentCursor) (*string, error) {
-	if cursor == nil {
-		return nil, nil
-	}
-
-	data, err := json.Marshal(cursor)
-	if err != nil {
-		return nil, err
-	}
-
-	// use RawURLEncoding to avoid trailing '==' characters
-	r := base64.RawURLEncoding.EncodeToString(data)
-	return &r, nil
 }
