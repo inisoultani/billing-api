@@ -283,7 +283,7 @@ func decodeCursor(r *http.Request) (*domain.PaymentCursor, error) {
 		return nil, nil
 	}
 
-	decodedCursor, err := base64.StdEncoding.DecodeString(encodedCursor)
+	decodedCursor, err := base64.RawURLEncoding.DecodeString(encodedCursor)
 	if err != nil {
 		return nil, err
 	}
