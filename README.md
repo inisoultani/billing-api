@@ -139,6 +139,53 @@ The project follows a clean separation of concerns and is organized as follows:
 
 ## 5. API Usage
 
+### Get Loan Details
+
+Returns detailed information for a specific loan, including derived state.
+
+**Endpoint**
+
+```
+GET /loan/:id
+```
+
+**Path Parameters**
+
+| Name | Description                   |
+| ---- | ----------------------------- |
+| id   | Unique identifier of the loan |
+
+---
+
+### Example Request
+
+```bash
+curl "http://localhost:8081/loan/1"
+```
+
+---
+
+### Success Response
+
+```json
+{
+  "loan_id": 1,
+  "total_payable": 5500000,
+  "weekly_payment_amount": 1100000,
+  "total_weeks": 5,
+  "created_at": "2026-01-05T10:31:33Z",
+  "is_delinquent": true
+}
+```
+
+Notes
+
+- `is_delinquent` is a derived field computed at read time
+- The value is not persisted in the database
+- See `ADR-002: Derived states are computed dynamically`
+
+---
+
 ### List Payments (Cursor-Based Pagination)
 
 Returns a paginated list of payments for a specific loan.
