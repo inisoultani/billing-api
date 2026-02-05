@@ -28,6 +28,7 @@ func NewRouter(billingService *service.BillingService) http.Handler {
 		r.Post("/", h.SubmitLoan)
 		r.Get("/{loanID}", h.GetLoanByID)
 		r.Get("/{loanID}/outstanding", h.GetOutstanding)
+		r.Get("/{loanID}/payment", h.ListPayments)
 		r.Post("/{loanID}/payment", h.MakePayment)
 	})
 

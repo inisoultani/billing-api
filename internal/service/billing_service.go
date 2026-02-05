@@ -49,6 +49,29 @@ func mapLoan(l sqlc.Loan) *domain.Loan {
 	}
 }
 
+func mapPayment(p sqlc.ListPaymentsByLoanIDRow) *domain.Payment {
+	return &domain.Payment{
+		ID:         p.ID,
+		WeekNumber: int(p.WeekNumber),
+		Amount:     p.Amount,
+		PaidAt:     p.PaidAt.Time,
+	}
+}
+
+/*
+weekSince internal helper method to calculte week duration between 2 different time
+*/
+func weekSince(start, now time.Time) int {
+	if now.Before(start) {
+		return 0
+	}
+
+	duration := now.Sub(start)
+	weeks := int(duration.Hours() / (24 * 7))
+
+	return weeks + 1
+}
+
 // constructor
 func NewBillingService(pool *pgxpool.Pool) *BillingService {
 	return &BillingService{
@@ -237,15 +260,50 @@ func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now tim
 }
 
 /*
-weekSince internal helper method to calculte week duration between 2 different time
+ListPayments return all payment records based on loan id
 */
-func weekSince(start, now time.Time) int {
-	if now.Before(start) {
-		return 0
+func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit int, cursor *domain.PaymentCursor) ([]*domain.Payment, *domain.PaymentCursor, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 10
 	}
 
-	duration := now.Sub(start)
-	weeks := int(duration.Hours() / (24 * 7))
+	params := sqlc.ListPaymentsByLoanIDParams{
+		LoanID:   loanID,
+		LimitVal: int32(limit),
+	}
+	// ensure cursor not null or by default use nil as value for paidAt and id
+	if cursor != nil {
+		params.CursorPaidAt = pgtype.Timestamptz{
+			Time:  cursor.PaidAt,
+			Valid: true,
+		}
+		params.CursorID = pgtype.Int8{
+			Int64: cursor.ID,
+			Valid: true,
+		}
+	} else {
+		params.CursorPaidAt = pgtype.Timestamptz{Valid: false}
+		params.CursorID = pgtype.Int8{Valid: false}
+	}
 
-	return weeks + 1
+	rows, err := s.queries.ListPaymentsByLoanID(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	payments := make([]*domain.Payment, 0, len(rows))
+	for _, r := range rows {
+		payments = append(payments, mapPayment(r))
+	}
+
+	var nextCursor *domain.PaymentCursor
+	if len(rows) == limit {
+		last := rows[len(rows)-1]
+		nextCursor = &domain.PaymentCursor{
+			PaidAt: last.PaidAt.Time,
+			ID:     last.ID,
+		}
+	}
+
+	return payments, nextCursor, nil
 }
