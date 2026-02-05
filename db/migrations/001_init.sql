@@ -21,4 +21,4 @@ CREATE TABLE payments (
 );
 CREATE INDEX idx_repayments_loan_id ON payments(loan_id);
 CREATE INDEX idx_repayments_loan_week ON payments(loan_id, week_number);
-CREATE INDEX idx_repayments_loan_paidat_id ON repayments (loan_id, paid_at, id);
+CREATE INDEX idx_repayments_loan_paidat_id ON payments (loan_id, paid_at, id);
