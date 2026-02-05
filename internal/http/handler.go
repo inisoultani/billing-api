@@ -55,13 +55,23 @@ func NewHandler(bs *service.BillingService) *Handler {
 	}
 }
 
-func (h *Handler) GetLoan(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) {
 	loanIDStr := chi.URLParam(r, "loanID")
 	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Invalid loan id", http.StatusBadRequest)
 	}
-	loan, err := h.billingService.GetLoan(r.Context(), loanID)
+	loan, err := h.billingService.GetLoanByID(r.Context(), loanID)
+	if err != nil {
+		switch err {
+		case service.ErrLoanNotFound:
+			http.Error(w, "Loan not found", http.StatusNotFound)
+		default:
+			log.Printf("Error find loan %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
 
 	resp := detailLoanResponse{
 		LoanID:              loan.ID,

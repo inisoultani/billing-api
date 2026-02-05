@@ -60,7 +60,7 @@ func NewBillingService(pool *pgxpool.Pool) *BillingService {
 /*
 GetLoan get loan detail based on id
 */
-func (s *BillingService) GetLoan(ctx context.Context, loanID int64) (*domain.Loan, error) {
+func (s *BillingService) GetLoanByID(ctx context.Context, loanID int64) (*domain.Loan, error) {
 
 	// load loan
 	loan, err := s.queries.GetLoanByID(ctx, loanID)
