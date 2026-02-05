@@ -171,10 +171,18 @@ curl "http://localhost:8081/loan/3/payment?limit=2"
 ```json
 {
   "payments": [
-    { "week_number": 1, "amount": 5000, "paid_at": 1738767409 },
-    { "week_number": 2, "amount": 5000, "paid_at": 1738853809 }
+    {
+      "week_number": 1,
+      "amount": 1100000,
+      "paid_at": "2026-02-05T17:31:40Z"
+    },
+    {
+      "week_number": 2,
+      "amount": 1100000,
+      "paid_at": "2026-02-05T17:31:42Z"
+    }
   ],
-  "next_cursor": "eyJQYWlkQXQiOiIyMDI2LTAyLTA1VDE0OjU2OjQ5WiIsIklEIjo2Mn0"
+  "next_cursor": "eyJQYWlkQXQiOiIyMDI2LTAyLTA1VDE3OjMxOjQyLjAxNDQzMloiLCJJRCI6Mn0"
 }
 ```
 
