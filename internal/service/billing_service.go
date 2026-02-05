@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -13,7 +14,9 @@ import (
 var (
 	ErrLoanNotFound            = errors.New("Loan not found")
 	ErrInvalidStateOutstanding = errors.New("Invalid loan payment state")
-	ErrInvalidLoanTerms        = errors.New("invalid loan terms")
+	ErrInvalidLoanTerms        = errors.New("Invalid loan terms")
+	ErrInvalidPayment          = errors.New("Invalid payment")
+	ErrLoanAlreadyClosed       = errors.New("Loan already fully paid")
 )
 
 type SubmitLoanInput struct {
@@ -23,13 +26,21 @@ type SubmitLoanInput struct {
 	StartDate          time.Time
 }
 
+type SubmitPaymentInput struct {
+	LoanID int64
+	Amount int64
+	PaidAt time.Time
+}
+
 type BillingService struct {
+	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 // constructor
 func NewBillingService(pool *pgxpool.Pool) *BillingService {
 	return &BillingService{
+		pool:    pool,
 		queries: sqlc.New(pool),
 	}
 }
@@ -77,6 +88,9 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 	return &loan, nil
 }
 
+/*
+GetOutstanding get total amount that user still need to pay
+*/
 func (s *BillingService) GetOutstanding(ctx context.Context, loanID int64) (int64, error) {
 	loan, err := s.queries.GetLoanByID(ctx, loanID)
 	if err != nil {
@@ -95,4 +109,62 @@ func (s *BillingService) GetOutstanding(ctx context.Context, loanID int64) (int6
 	}
 
 	return outstanding, nil
+}
+
+/*
+SubmitPayment will validate the input and determines the next unpaid week, and persists a loan payment.
+
+When a payment is submitted (as interpreted within the problem statement):
+- Loan must exist
+- Loan must not be fully paid
+- Payment amount must equal weekly_payment_amount
+- Payment applies to the next unpaid week
+- A week cannot be paid twice
+- Operation must be atomic (transaction)
+*/
+func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentInput) (int64, error) {
+
+	return withTx(ctx, s.pool, func(tx pgx.Tx) (int64, error) {
+		// load loan
+		loan, err := s.queries.GetLoanByID(ctx, input.LoanID)
+		if err != nil {
+			return 0, ErrLoanNotFound
+		}
+
+		// check for outstanding
+		totalPaid, err := s.queries.GetTotalPaidAmount(ctx, input.LoanID)
+		if err != nil {
+			return 0, err
+		}
+		if totalPaid > loan.TotalPayableAmount {
+			return 0, ErrLoanAlreadyClosed
+		}
+		if input.Amount != loan.WeeklyPaymentAmount {
+			return 0, ErrInvalidPayment
+		}
+
+		// determine next unpaid week
+		paidWeeks, err := s.queries.GetPaidWeeksCount(ctx, input.LoanID)
+		if err != nil {
+			return 0, err
+		}
+		nextWeek := paidWeeks + 1
+		if nextWeek > loan.TotalWeeks {
+			return 0, ErrLoanAlreadyClosed
+		}
+
+		payment, err := s.queries.InsertPayment(ctx, sqlc.InsertPaymentParams{
+			LoanID:     input.LoanID,
+			WeekNumber: nextWeek,
+			Amount:     input.Amount,
+			PaidAt: pgtype.Timestamp{
+				Time:  input.PaidAt,
+				Valid: true,
+			},
+		})
+		if err != nil {
+			return 0, err
+		}
+		return payment.ID, nil
+	})
 }

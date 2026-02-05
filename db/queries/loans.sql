@@ -6,7 +6,7 @@ WHERE id = $1;
 SELECT COALESCE(SUM(amount), 0)::BIGINT AS total_paid
 FROM payments
 WHERE loan_id = $1;
--- name: InsertRepayment :one
+-- name: InsertPayment :one
 INSERT INTO payments (loan_id, week_number, amount, paid_at)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
@@ -25,3 +25,7 @@ INSERT INTO loans (
   )
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
+-- name: GetPaidWeeksCount :one
+SELECT COUNT(*)::INT
+FROM payments
+WHERE loan_id = $1;

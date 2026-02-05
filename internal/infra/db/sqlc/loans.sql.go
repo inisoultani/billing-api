@@ -46,6 +46,19 @@ func (q *Queries) GetLoanByID(ctx context.Context, id int64) (Loan, error) {
 	return i, err
 }
 
+const getPaidWeeksCount = `-- name: GetPaidWeeksCount :one
+SELECT COUNT(*)::INT
+FROM payments
+WHERE loan_id = $1
+`
+
+func (q *Queries) GetPaidWeeksCount(ctx context.Context, loanID int64) (int32, error) {
+	row := q.db.QueryRow(ctx, getPaidWeeksCount, loanID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getTotalPaidAmount = `-- name: GetTotalPaidAmount :one
 SELECT COALESCE(SUM(amount), 0)::BIGINT AS total_paid
 FROM payments
@@ -104,21 +117,21 @@ func (q *Queries) InsertLoan(ctx context.Context, arg InsertLoanParams) (Loan, e
 	return i, err
 }
 
-const insertRepayment = `-- name: InsertRepayment :one
+const insertPayment = `-- name: InsertPayment :one
 INSERT INTO payments (loan_id, week_number, amount, paid_at)
 VALUES ($1, $2, $3, $4)
 RETURNING id, loan_id, week_number, amount, paid_at, created_at
 `
 
-type InsertRepaymentParams struct {
+type InsertPaymentParams struct {
 	LoanID     int64
 	WeekNumber int32
 	Amount     int64
 	PaidAt     pgtype.Timestamp
 }
 
-func (q *Queries) InsertRepayment(ctx context.Context, arg InsertRepaymentParams) (Payment, error) {
-	row := q.db.QueryRow(ctx, insertRepayment,
+func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error) {
+	row := q.db.QueryRow(ctx, insertPayment,
 		arg.LoanID,
 		arg.WeekNumber,
 		arg.Amount,
