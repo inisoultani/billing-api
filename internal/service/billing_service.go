@@ -34,8 +34,8 @@ type SubmitPaymentInput struct {
 }
 
 type BillingService struct {
-	pool    *pgxpool.Pool
-	queries *sqlc.Queries
+	pool *pgxpool.Pool
+	repo domain.BillingRepository
 }
 
 func mapLoan(l sqlc.Loan) *domain.Loan {
@@ -73,10 +73,10 @@ func weekSince(start, now time.Time) int {
 }
 
 // constructor
-func NewBillingService(pool *pgxpool.Pool) *BillingService {
+func NewBillingService(pool *pgxpool.Pool, repo domain.BillingRepository) *BillingService {
 	return &BillingService{
-		pool:    pool,
-		queries: sqlc.New(pool),
+		pool: pool,
+		repo: repo,
 	}
 }
 
@@ -86,7 +86,7 @@ GetLoan get loan detail based on id
 func (s *BillingService) GetLoanByID(ctx context.Context, loanID int64) (*domain.Loan, error) {
 
 	// load loan
-	loan, err := s.queries.GetLoanByID(ctx, loanID)
+	loan, err := s.repo.GetLoanByID(ctx, loanID)
 	if err != nil {
 		return nil, ErrLoanNotFound
 	}
@@ -120,7 +120,7 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 
 		weeklyPayment := totalPayable / int64(input.TotalWeeks)
 
-		loan, err := s.queries.InsertLoan(ctx, sqlc.InsertLoanParams{
+		loan, err := s.repo.InsertLoan(ctx, sqlc.InsertLoanParams{
 			PrincipalAmount:     input.PrincipalAmount,
 			TotalInterestAmount: totalInterest,
 			TotalPayableAmount:  totalPayable,
@@ -143,12 +143,12 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 GetOutstanding get total amount that user still need to pay
 */
 func (s *BillingService) GetOutstanding(ctx context.Context, loanID int64) (int64, error) {
-	loan, err := s.queries.GetLoanByID(ctx, loanID)
+	loan, err := s.repo.GetLoanByID(ctx, loanID)
 	if err != nil {
 		return 0, ErrLoanNotFound
 	}
 
-	totalPaid, err := s.queries.GetTotalPaidAmount(ctx, loanID)
+	totalPaid, err := s.repo.GetTotalPaidAmount(ctx, loanID)
 	if err != nil {
 		return 0, err
 	}
@@ -177,13 +177,13 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 
 	return withTx(ctx, s.pool, func(tx pgx.Tx) (int64, error) {
 		// load loan
-		loan, err := s.queries.GetLoanByID(ctx, input.LoanID)
+		loan, err := s.repo.GetLoanByID(ctx, input.LoanID)
 		if err != nil {
 			return 0, ErrLoanNotFound
 		}
 
 		// check for outstanding
-		totalPaid, err := s.queries.GetTotalPaidAmount(ctx, input.LoanID)
+		totalPaid, err := s.repo.GetTotalPaidAmount(ctx, input.LoanID)
 		if err != nil {
 			return 0, err
 		}
@@ -195,7 +195,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		}
 
 		// determine next unpaid week
-		paidWeeks, err := s.queries.GetPaidWeeksCount(ctx, input.LoanID)
+		paidWeeks, err := s.repo.GetPaidWeeksCount(ctx, input.LoanID)
 		if err != nil {
 			return 0, err
 		}
@@ -204,7 +204,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 			return 0, ErrLoanAlreadyClosed
 		}
 
-		payment, err := s.queries.InsertPayment(ctx, sqlc.InsertPaymentParams{
+		payment, err := s.repo.InsertPayment(ctx, sqlc.InsertPaymentParams{
 			LoanID:     input.LoanID,
 			WeekNumber: nextWeek,
 			Amount:     input.Amount,
@@ -235,13 +235,13 @@ There is a gap of 2 or more weeks between:
 */
 func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now time.Time) (bool, error) {
 	// load loan
-	loan, err := s.queries.GetLoanByID(ctx, loanID)
+	loan, err := s.repo.GetLoanByID(ctx, loanID)
 	if err != nil {
 		return false, ErrLoanNotFound
 	}
 
 	// get loan last paid week
-	lastPaidWeek, err := s.queries.GetLastPaidWeek(ctx, loanID)
+	lastPaidWeek, err := s.repo.GetLastPaidWeek(ctx, loanID)
 	if err != nil {
 		return false, err
 	}
@@ -283,7 +283,7 @@ func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit i
 		params.CursorID = pgtype.Int8{Valid: false}
 	}
 
-	rows, err := s.queries.ListPaymentsByLoanID(ctx, params)
+	rows, err := s.repo.ListPaymentsByLoanID(ctx, params)
 	if err != nil {
 		return nil, nil, err
 	}

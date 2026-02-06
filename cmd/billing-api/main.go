@@ -31,7 +31,7 @@ func main() {
 
 	defer pool.Close()
 
-	billingService := service.NewBillingService(pool)
+	billingService := service.NewBillingService(pool, db.NewPostgresRepo(pool))
 
 	addr := ":" + cfg.ServerPort
 
