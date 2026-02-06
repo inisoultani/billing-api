@@ -68,3 +68,19 @@ func (r *PostgresRepo) InsertPayment(ctx context.Context, arg sqlc.InsertPayment
 func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPaymentsByLoanIDParams) ([]sqlc.ListPaymentsByLoanIDRow, error) {
 	return r.queries.ListPaymentsByLoanID(ctx, arg)
 }
+
+func (r *PostgresRepo) CreateLoanSchedule(ctx context.Context, arg sqlc.CreateLoanScheduleParams) (sqlc.Schedule, error) {
+	return r.queries.CreateLoanSchedule(ctx, arg)
+}
+
+func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListSchedulesByLoanIDWithCursorParams) ([]sqlc.Schedule, error) {
+	return r.queries.ListSchedulesByLoanIDWithCursor(ctx, arg)
+}
+
+func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error) {
+	return r.queries.UpdateSchedulePayment(ctx, arg)
+}
+
+func (r *PostgresRepo) GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error) {
+	return r.queries.GetScheduleBySequence(ctx, arg)
+}

@@ -219,3 +219,43 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
+
+func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// 1. Parse Loan ID from URL
+	loanIDStr := chi.URLParam(r, "loanID") // Assuming you use chi router
+	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid loan id", http.StatusBadRequest)
+		return
+	}
+
+	limitStr := r.URL.Query().Get("limit")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		http.Error(w, "Invalid page limit number", http.StatusBadRequest)
+		return
+	}
+	if limit <= 0 || limit > h.config.PagingLimitMax {
+		limit = h.config.PagingLimitDefault
+	}
+
+	cursor := r.URL.Query().Get("cursor")
+
+	// 3. Call Service Layer
+	schedules, nextCursor, err := h.billingService.ListSchedules(ctx, loanID, limit, cursor)
+	if err != nil {
+		// Log error and return internal server error
+		http.Error(w, "Failed to retrieve schedules", http.StatusInternalServerError)
+		return
+	}
+
+	// 4. Map and Respond
+	response := ToListScheduleResponse(schedules, nextCursor)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+
+}

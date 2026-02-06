@@ -70,3 +70,27 @@ func (m *MockBillingRepository) ListPaymentsByLoanID(ctx context.Context, arg sq
 	}
 	return args.Get(0).([]sqlc.ListPaymentsByLoanIDRow), args.Error(1)
 }
+
+func (m *MockBillingRepository) CreateLoanSchedule(ctx context.Context, arg sqlc.CreateLoanScheduleParams) (sqlc.Schedule, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(sqlc.Schedule), args.Error(1)
+}
+
+func (m *MockBillingRepository) ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListSchedulesByLoanIDWithCursorParams) ([]sqlc.Schedule, error) {
+	args := m.Called(ctx, arg)
+	// We use a type assertion for the slice. If nil is returned, we handle it.
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]sqlc.Schedule), args.Error(1)
+}
+
+func (m *MockBillingRepository) UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(sqlc.Schedule), args.Error(1)
+}
+
+func (m *MockBillingRepository) GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(sqlc.Schedule), args.Error(1)
+}
