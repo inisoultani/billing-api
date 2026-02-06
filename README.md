@@ -260,6 +260,16 @@ sqlc generate
 
 ---
 
+## 7. Unit Test
+
+# Running Unit Tests
+
+Run unit tests only for the internal/service package:
+
+```bash
+go test ./internal/service
+```
+
 ## Notes
 
 - Derived states (e.g. delinquency) are computed dynamically and not persisted.

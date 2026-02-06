@@ -179,7 +179,6 @@ When a payment is submitted (as interpreted within the problem statement):
 func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentInput) (int64, error) {
 
 	var paymentID int64
-
 	err := s.repo.WithTx(ctx, func(repo domain.BillingRepository) error {
 		// load loan
 		loan, err := repo.GetLoanByID(ctx, input.LoanID)

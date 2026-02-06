@@ -109,13 +109,14 @@ func TestSubmitPayment_Mock(t *testing.T) {
 			PaidAt: time.Now(),
 		}
 
-		// We tell the mock: "When WithTx is called, execute the function passed to it"
-		mockRepo.On("WithTx", mock.Anything, mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-			fn := args.Get(1).(func(domain.BillingRepository) error)
-			_ = fn(mockRepo) // Execute the inner logic using the mockRepo
-		})
+		mockRepo.On("WithTx", mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				fn := args.Get(1).(func(domain.BillingRepository) error)
+				_ = fn(mockRepo) // Execute the inner logic using the mockRepo
+				// assert.NoError(t, err)
+			}).Return(nil)
 
-		// 1. Mock GetLoanByID (to check if loan exists and get weekly amount)
+		// mock GetLoanByID (to check if loan exists and get weekly amount)
 		mockRepo.On("GetLoanByID", mock.Anything, input.LoanID).Return(sqlc.Loan{
 			ID:                  1,
 			WeeklyPaymentAmount: 110000,
@@ -131,22 +132,51 @@ func TestSubmitPayment_Mock(t *testing.T) {
 			LoanID:     input.LoanID,
 			WeekNumber: 1,
 			Amount:     input.Amount,
-			PaidAt:     pgtype.Timestamp{Time: input.PaidAt, Valid: true},
+			PaidAt: pgtype.Timestamp{
+				Time:  input.PaidAt,
+				Valid: true,
+			},
 		}
 		mockRepo.On("InsertPayment", mock.Anything, expectedInsert).Return(sqlc.Payment{
 			ID: 999,
 		}, nil).Once()
 
-		// Execute
-		// NOTE: If your SubmitPayment uses s.pool.Begin, you will need to
-		// wrap the pool in an interface or mock the transaction.
-		// For now, this assumes s.repo is used for the logic.
 		id, err := svc.SubmitPayment(ctx, input)
 
-		// Assert
 		assert.NoError(t, err)
 		assert.Equal(t, int64(999), id)
 		mockRepo.AssertExpectations(t)
+		mockRepo.ExpectedCalls = nil
 	})
 
+	t.Run("fails when amount is incorrect", func(t *testing.T) {
+		input := SubmitPaymentInput{
+			LoanID: 1,
+			Amount: 6000, // Incorrect: logic expects 110000
+		}
+
+		mockRepo.
+			On("WithTx", mock.Anything, mock.Anything).
+			Run(func(args mock.Arguments) {
+				fn := args.Get(1).(func(domain.BillingRepository) error)
+				_ = fn(mockRepo)
+			}).Return(ErrInvalidPayment)
+
+		mockRepo.On("GetTotalPaidAmount", mock.Anything, input.LoanID).Return(int64(0), nil).Once()
+
+		mockRepo.On("GetLoanByID", mock.Anything, input.LoanID).Return(sqlc.Loan{
+			ID:                  1,
+			WeeklyPaymentAmount: 110000, // The required amount
+		}, nil).Once()
+
+		// If the code is correct, it should return early and never call it.
+		id, errF := svc.SubmitPayment(ctx, input)
+
+		assert.Error(t, errF)
+		assert.Contains(t, errF.Error(), "Invalid payment")
+		assert.Equal(t, int64(0), id)
+
+		// This confirms InsertPayment was never called
+		mockRepo.AssertExpectations(t)
+	})
 }
