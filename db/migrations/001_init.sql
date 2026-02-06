@@ -37,3 +37,4 @@ CREATE TABLE schedules (
   updated_at TIMESTAMP NOT NULL DEFAULT now(),
   UNIQUE (loan_id, sequence)
 );
+CREATE INDEX idx_schedules_loan_sequence ON schedules (loan_id, sequence);
