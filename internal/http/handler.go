@@ -48,7 +48,7 @@ func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) {
 	// - avoiding adding more latency
 	isDelinquent, err := h.billingService.IsDelinquent(r.Context(), loan.ID, time.Now())
 	if err != nil {
-		log.Printf("Failed to compute loan delinquency", err)
+		log.Printf("Failed to compute loan delinquency : %v", err)
 		http.Error(w, "Failed to compute loan delinquency", http.StatusInternalServerError)
 		return
 	}
