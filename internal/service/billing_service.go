@@ -135,6 +135,21 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 		if err != nil {
 			return err
 		}
+
+		// generate Schedules
+		for i := 1; i <= input.TotalWeeks; i++ {
+			dueDate := input.StartDate.AddDate(0, 0, 7*i) // Weekly increment
+			_, err := repo.CreateLoanSchedule(ctx, sqlc.CreateLoanScheduleParams{
+				LoanID:   loan.ID,
+				Sequence: int32(i),
+				DueDate:  pgtype.Date{Time: dueDate, Valid: true},
+				Amount:   weeklyPayment,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		domainLoan = mapLoan(loan)
 		return nil
 	})
@@ -220,6 +235,25 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		if err != nil {
 			return err
 		}
+
+		// Update the specific schedule record
+		// Use GetScheduleBySequence to find the ID instead of a manual loop
+		sch, err := repo.GetScheduleBySequence(ctx, sqlc.GetScheduleBySequenceParams{
+			LoanID:   input.LoanID,
+			Sequence: int32(nextWeek),
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = repo.UpdateSchedulePayment(ctx, sqlc.UpdateSchedulePaymentParams{
+			ID:         sch.ID,
+			PaidAmount: input.Amount,
+		})
+		if err != nil {
+			return err
+		}
+
 		paymentID = payment.ID
 		return nil
 	})
@@ -309,4 +343,42 @@ func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit i
 	}
 
 	return payments, nextCursor, nil
+}
+
+/*
+ListSchedules return all schedule records based on loan id
+*/
+func (s *BillingService) ListSchedules(ctx context.Context, loanID int64, limit int, cursor *domain.ScheduleCursor) ([]*domain.LoanSchedule, *domain.ScheduleCursor, error) {
+
+	params := sqlc.ListSchedulesByLoanIDWithCursorParams{
+		LoanID:   loanID,
+		Limit:    int32(limit),
+		Sequence: 0, // Default to start from the beginning
+	}
+
+	if cursor != nil {
+		params.Sequence = cursor.Sequence
+	}
+
+	// Fetch using sequence-based pagination
+	rows, err := s.repo.ListSchedulesByLoanID(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	schedules := make([]*domain.LoanSchedule, 0, len(rows))
+	for _, r := range rows {
+		schedules = append(schedules, domain.MapSchedule(r))
+	}
+
+	// Generate Next Cursor
+	var nextCursor *domain.ScheduleCursor
+	if len(schedules) == limit {
+		lastItem := schedules[len(schedules)-1]
+		nextCursor = &domain.ScheduleCursor{
+			Sequence: int32(lastItem.Sequence),
+		}
+	}
+
+	return schedules, nextCursor, nil
 }

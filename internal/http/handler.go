@@ -2,6 +2,7 @@ package http
 
 import (
 	"billing-api/internal/config"
+	"billing-api/internal/domain"
 	"billing-api/internal/service"
 	"encoding/json"
 	"log"
@@ -193,9 +194,9 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 		limit = h.config.PagingLimitDefault
 	}
 
-	cursor, err := DecodeCursor(r)
+	cursor, err := DecodeCursor[domain.PaymentCursor](r)
 	if err != nil {
-		http.Error(w, "Invalid cursor format", http.StatusBadRequest)
+		http.Error(w, "Invalid payment cursor", http.StatusBadRequest)
 		return
 	}
 
@@ -218,4 +219,46 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	loanIDStr := chi.URLParam(r, "loanID") // Assuming you use chi router
+	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid loan id", http.StatusBadRequest)
+		return
+	}
+
+	limitStr := r.URL.Query().Get("limit")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		http.Error(w, "Invalid page limit number", http.StatusBadRequest)
+		return
+	}
+	if limit <= 0 || limit > h.config.PagingLimitMax {
+		limit = h.config.PagingLimitDefault
+	}
+
+	cursor, err := DecodeCursor[domain.ScheduleCursor](r)
+	if err != nil {
+		http.Error(w, "Invalid schedule cursor", http.StatusBadRequest)
+		return
+	}
+
+	schedules, nextCursorObj, err := h.billingService.ListSchedules(ctx, loanID, limit, cursor)
+	if err != nil {
+		// Log error and return internal server error
+		http.Error(w, "Failed to retrieve schedules", http.StatusInternalServerError)
+		return
+	}
+
+	nextCursorStr, _ := EncodeCursor(nextCursorObj)
+	response := ToListScheduleResponse(schedules, nextCursorStr)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+
 }

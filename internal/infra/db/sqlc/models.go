@@ -27,3 +27,15 @@ type Payment struct {
 	PaidAt     pgtype.Timestamp
 	CreatedAt  pgtype.Timestamp
 }
+
+type Schedule struct {
+	ID         int64
+	LoanID     int64
+	Sequence   int32
+	DueDate    pgtype.Date
+	Amount     int64
+	PaidAmount int64
+	Status     string
+	CreatedAt  pgtype.Timestamp
+	UpdatedAt  pgtype.Timestamp
+}

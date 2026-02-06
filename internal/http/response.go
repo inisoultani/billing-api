@@ -43,6 +43,19 @@ type ListPaymentResponse struct {
 	NextCursor *string           `json:"next_cursor,omitempty"`
 }
 
+type ScheduleResponse struct {
+	Sequence   int    `json:"sequence"`
+	DueDate    string `json:"due_date"`
+	Amount     int64  `json:"amount"`
+	PaidAmount int64  `json:"paid_amount"`
+	Status     string `json:"status"`
+}
+
+type ListScheduleResponse struct {
+	Schedules  []ScheduleResponse `json:"schedules"`
+	NextCursor *string            `json:"next_cursor,omitempty"`
+}
+
 func ToListPaymentResponse(payments []*domain.Payment, nextCursor *string) ListPaymentResponse {
 	list := make([]PaymentResponse, len(payments))
 	for i, p := range payments {
@@ -58,7 +71,8 @@ func ToListPaymentResponse(payments []*domain.Payment, nextCursor *string) ListP
 	}
 }
 
-func DecodeCursor(r *http.Request) (*domain.PaymentCursor, error) {
+// DecodeCursor generic function to decode any struct from a base64 URL query param
+func DecodeCursor[T any](r *http.Request) (*T, error) {
 	encodedCursor := r.URL.Query().Get("cursor")
 	if encodedCursor == "" {
 		return nil, nil
@@ -69,10 +83,28 @@ func DecodeCursor(r *http.Request) (*domain.PaymentCursor, error) {
 		return nil, err
 	}
 
-	var cursor domain.PaymentCursor
+	var cursor T
 	if err := json.Unmarshal(decodedCursor, &cursor); err != nil {
 		return nil, err
 	}
 
 	return &cursor, nil
+}
+
+// ToListScheduleResponse maps domain models to the API response format
+func ToListScheduleResponse(schedules []*domain.LoanSchedule, nextCursor *string) ListScheduleResponse {
+	list := make([]ScheduleResponse, len(schedules))
+	for i, s := range schedules {
+		list[i] = ScheduleResponse{
+			Sequence:   s.Sequence,
+			DueDate:    s.DueDate.Format("2006-01-02"), // Standard ISO date
+			Amount:     s.Amount,
+			PaidAmount: s.PaidAmount,
+			Status:     s.Status,
+		}
+	}
+	return ListScheduleResponse{
+		Schedules:  list,
+		NextCursor: nextCursor,
+	}
 }
