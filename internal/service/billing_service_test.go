@@ -46,4 +46,50 @@ func TestIsDelinquent_Mock(t *testing.T) {
 		mockRepo.AssertExpectations(t)
 	})
 
+	t.Run("should NOT be delinquent when paid up to date", func(t *testing.T) {
+		loanID := int64(2)
+		twoWeeksAgo := now.AddDate(0, 0, -14)
+
+		mockRepo.On("GetLoanByID", ctx, loanID).Return(sqlc.Loan{
+			ID: loanID,
+			CreatedAt: pgtype.Timestamp{
+				Time:  twoWeeksAgo,
+				Valid: true,
+			},
+		}, nil).Once()
+
+		// expected week 2 - paid 2 = 0 not delinquent
+		mockRepo.On("GetLastPaidWeek", ctx, loanID).Return(int32(2), nil).Once()
+
+		isDelinquent, err := svc.IsDelinquent(ctx, loanID, now)
+
+		assert.NoError(t, err)
+		assert.False(t, isDelinquent)
+		mockRepo.AssertExpectations(t)
+	})
+
+}
+
+func TestGetOutstanding_Unit(t *testing.T) {
+	// intialize mock repository
+	mockRepo := new(mocks.MockBillingRepository)
+
+	// provide nil since we are in mock mode
+	svc := NewBillingService(nil, mockRepo)
+	ctx := context.Background()
+
+	loanID := int64(1)
+
+	// simulate a loan with 5,000,000 total and 1,000,000 already paid
+	mockRepo.On("GetLoanByID", ctx, loanID).Return(sqlc.Loan{
+		ID:                 loanID,
+		TotalPayableAmount: 5000000,
+	}, nil)
+	mockRepo.On("GetTotalPaidAmount", ctx, loanID).Return(int64(1000000), nil)
+
+	outstanding, err := svc.GetOutstanding(ctx, loanID)
+
+	assert.NoError(t, err)
+	assert.Equal(t, int64(4000000), outstanding)
+	mockRepo.AssertExpectations(t)
 }
