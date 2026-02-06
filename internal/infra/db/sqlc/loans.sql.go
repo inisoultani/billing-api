@@ -11,19 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getLastPaidWeek = `-- name: GetLastPaidWeek :one
-SELECT COALESCE(MAX(week_number), 0)::INT AS last_paid_week
-FROM payments
-WHERE loan_id = $1
-`
-
-func (q *Queries) GetLastPaidWeek(ctx context.Context, loanID int64) (int32, error) {
-	row := q.db.QueryRow(ctx, getLastPaidWeek, loanID)
-	var last_paid_week int32
-	err := row.Scan(&last_paid_week)
-	return last_paid_week, err
-}
-
 const getLoanByID = `-- name: GetLoanByID :one
 SELECT id, principal_amount, total_interest_amount, total_payable_amount, weekly_payment_amount, total_weeks, start_date, created_at
 FROM loans
@@ -44,32 +31,6 @@ func (q *Queries) GetLoanByID(ctx context.Context, id int64) (Loan, error) {
 		&i.CreatedAt,
 	)
 	return i, err
-}
-
-const getPaidWeeksCount = `-- name: GetPaidWeeksCount :one
-SELECT COUNT(*)::INT
-FROM payments
-WHERE loan_id = $1
-`
-
-func (q *Queries) GetPaidWeeksCount(ctx context.Context, loanID int64) (int32, error) {
-	row := q.db.QueryRow(ctx, getPaidWeeksCount, loanID)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const getTotalPaidAmount = `-- name: GetTotalPaidAmount :one
-SELECT COALESCE(SUM(amount), 0)::BIGINT AS total_paid
-FROM payments
-WHERE loan_id = $1
-`
-
-func (q *Queries) GetTotalPaidAmount(ctx context.Context, loanID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, getTotalPaidAmount, loanID)
-	var total_paid int64
-	err := row.Scan(&total_paid)
-	return total_paid, err
 }
 
 const insertLoan = `-- name: InsertLoan :one
@@ -112,38 +73,6 @@ func (q *Queries) InsertLoan(ctx context.Context, arg InsertLoanParams) (Loan, e
 		&i.WeeklyPaymentAmount,
 		&i.TotalWeeks,
 		&i.StartDate,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const insertPayment = `-- name: InsertPayment :one
-INSERT INTO payments (loan_id, week_number, amount, paid_at)
-VALUES ($1, $2, $3, $4)
-RETURNING id, loan_id, week_number, amount, paid_at, created_at
-`
-
-type InsertPaymentParams struct {
-	LoanID     int64
-	WeekNumber int32
-	Amount     int64
-	PaidAt     pgtype.Timestamp
-}
-
-func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error) {
-	row := q.db.QueryRow(ctx, insertPayment,
-		arg.LoanID,
-		arg.WeekNumber,
-		arg.Amount,
-		arg.PaidAt,
-	)
-	var i Payment
-	err := row.Scan(
-		&i.ID,
-		&i.LoanID,
-		&i.WeekNumber,
-		&i.Amount,
-		&i.PaidAt,
 		&i.CreatedAt,
 	)
 	return i, err
