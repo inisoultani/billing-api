@@ -7,7 +7,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -105,9 +104,11 @@ The assumptions (as allowed by the problem statement):
 */
 func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) (*domain.Loan, error) {
 
-	return withTx(ctx, s.pool, func(tx pgx.Tx) (*domain.Loan, error) {
+	var domainLoan *domain.Loan
+
+	err := s.repo.WithTx(ctx, func(repo domain.BillingRepository) error {
 		if input.PrincipalAmount <= 0 || input.TotalWeeks <= 0 {
-			return nil, ErrInvalidLoanTerms
+			return ErrInvalidLoanTerms
 		}
 
 		// flat interest
@@ -115,12 +116,12 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 		totalPayable := input.PrincipalAmount + totalInterest
 
 		if totalPayable%int64(input.TotalWeeks) != 0 {
-			return nil, errors.New("weekly payment is not evenly divisible")
+			return errors.New("weekly payment is not evenly divisible")
 		}
 
 		weeklyPayment := totalPayable / int64(input.TotalWeeks)
 
-		loan, err := s.repo.InsertLoan(ctx, sqlc.InsertLoanParams{
+		loan, err := repo.InsertLoan(ctx, sqlc.InsertLoanParams{
 			PrincipalAmount:     input.PrincipalAmount,
 			TotalInterestAmount: totalInterest,
 			TotalPayableAmount:  totalPayable,
@@ -132,11 +133,13 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 			},
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		return mapLoan(loan), nil
+		domainLoan = mapLoan(loan)
+		return nil
 	})
+
+	return domainLoan, err
 }
 
 /*
@@ -175,36 +178,38 @@ When a payment is submitted (as interpreted within the problem statement):
 */
 func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentInput) (int64, error) {
 
-	return withTx(ctx, s.pool, func(tx pgx.Tx) (int64, error) {
+	var paymentID int64
+
+	err := s.repo.WithTx(ctx, func(repo domain.BillingRepository) error {
 		// load loan
-		loan, err := s.repo.GetLoanByID(ctx, input.LoanID)
+		loan, err := repo.GetLoanByID(ctx, input.LoanID)
 		if err != nil {
-			return 0, ErrLoanNotFound
+			return ErrLoanNotFound
 		}
 
 		// check for outstanding
-		totalPaid, err := s.repo.GetTotalPaidAmount(ctx, input.LoanID)
+		totalPaid, err := repo.GetTotalPaidAmount(ctx, input.LoanID)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		if totalPaid > loan.TotalPayableAmount {
-			return 0, ErrLoanAlreadyClosed
+			return ErrLoanAlreadyClosed
 		}
 		if input.Amount != loan.WeeklyPaymentAmount {
-			return 0, ErrInvalidPayment
+			return ErrInvalidPayment
 		}
 
 		// determine next unpaid week
-		paidWeeks, err := s.repo.GetPaidWeeksCount(ctx, input.LoanID)
+		paidWeeks, err := repo.GetPaidWeeksCount(ctx, input.LoanID)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		nextWeek := paidWeeks + 1
 		if nextWeek > loan.TotalWeeks {
-			return 0, ErrLoanAlreadyClosed
+			return ErrLoanAlreadyClosed
 		}
 
-		payment, err := s.repo.InsertPayment(ctx, sqlc.InsertPaymentParams{
+		payment, err := repo.InsertPayment(ctx, sqlc.InsertPaymentParams{
 			LoanID:     input.LoanID,
 			WeekNumber: nextWeek,
 			Amount:     input.Amount,
@@ -214,10 +219,12 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 			},
 		})
 		if err != nil {
-			return 0, err
+			return err
 		}
-		return payment.ID, nil
+		paymentID = payment.ID
+		return nil
 	})
+	return paymentID, err
 }
 
 /*

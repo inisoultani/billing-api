@@ -6,6 +6,10 @@ import (
 )
 
 type BillingRepository interface {
+
+	// transcaction
+	WithTx(ctx context.Context, fn func(repo BillingRepository) error) error
+
 	// Loan-related actions
 	GetLoanByID(ctx context.Context, id int64) (sqlc.Loan, error)
 	InsertLoan(ctx context.Context, arg sqlc.InsertLoanParams) (sqlc.Loan, error)

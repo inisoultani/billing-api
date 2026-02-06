@@ -1,20 +1,35 @@
 package db
 
 import (
+	"billing-api/internal/domain"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PostgresRepo struct {
+	pool    *pgxpool.Pool
 	queries *sqlc.Queries
 }
 
 func NewPostgresRepo(pool *pgxpool.Pool) *PostgresRepo {
 	return &PostgresRepo{
+		pool:    pool,
 		queries: sqlc.New(pool),
 	}
+}
+
+func (r *PostgresRepo) WithTx(ctx context.Context, fn func(repo domain.BillingRepository) error) error {
+	return withTx(ctx, r.pool, func(tx pgx.Tx) error {
+		// Create a new repository that uses the transaction instead of the pool
+		txRepo := &PostgresRepo{
+			queries: r.queries.WithTx(tx),
+			pool:    r.pool,
+		}
+		return fn(txRepo)
+	})
 }
 
 // LOAN RELATED

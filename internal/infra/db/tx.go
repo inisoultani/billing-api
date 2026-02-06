@@ -1,4 +1,4 @@
-package service
+package db
 
 import (
 	"context"
@@ -10,28 +10,32 @@ import (
 /*
 withTx reusable wrapper function to support atomic transactional
 */
-func withTx[T any](ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) (T, error)) (T, error) {
-	var null T
+func withTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) error {
+
 	tx, err := pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return null, err
+		return err
 	}
 
 	defer func() {
 		if err != nil {
 			_ = tx.Rollback(ctx)
+		} else if r := recover(); r != nil {
+			_ = tx.Rollback(ctx)
+			// Re-panic so the application knows something went wrong
+			panic(r)
 		}
 	}()
 
-	result, err := fn(tx)
+	err = fn(tx)
 	if err != nil {
 		_ = tx.Rollback(ctx)
-		return null, err
+		return err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return null, err
+		return err
 	}
 
-	return result, nil
+	return nil
 }

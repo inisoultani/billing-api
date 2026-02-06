@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"billing-api/internal/domain"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 
@@ -10,6 +11,18 @@ import (
 // MockBillingRepository is a testify mock that satisfies the BillingRepository interface.
 type MockBillingRepository struct {
 	mock.Mock
+}
+
+// WithTx is the "magic" part for unit testing SubmitPayment
+func (m *MockBillingRepository) WithTx(ctx context.Context, fn func(repo domain.BillingRepository) error) error {
+	args := m.Called(ctx, fn)
+
+	// In the test, we will use .Run() to actually execute 'fn'
+	// If the mock was told to return an error, we return it here
+	if args.Get(0) != nil {
+		return args.Error(0)
+	}
+	return nil
 }
 
 // GetLoanByID mocks the retrieval of a single loan.
