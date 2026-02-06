@@ -56,7 +56,6 @@ type ListScheduleResponse struct {
 	NextCursor *string            `json:"next_cursor,omitempty"`
 }
 
-
 func ToListPaymentResponse(payments []*domain.Payment, nextCursor *string) ListPaymentResponse {
 	list := make([]PaymentResponse, len(payments))
 	for i, p := range payments {
@@ -72,7 +71,8 @@ func ToListPaymentResponse(payments []*domain.Payment, nextCursor *string) ListP
 	}
 }
 
-func DecodeCursor(r *http.Request) (*domain.PaymentCursor, error) {
+// DecodeCursor generic function to decode any struct from a base64 URL query param
+func DecodeCursor[T any](r *http.Request) (*T, error) {
 	encodedCursor := r.URL.Query().Get("cursor")
 	if encodedCursor == "" {
 		return nil, nil
@@ -83,7 +83,7 @@ func DecodeCursor(r *http.Request) (*domain.PaymentCursor, error) {
 		return nil, err
 	}
 
-	var cursor domain.PaymentCursor
+	var cursor T
 	if err := json.Unmarshal(decodedCursor, &cursor); err != nil {
 		return nil, err
 	}

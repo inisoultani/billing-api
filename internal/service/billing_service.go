@@ -4,9 +4,7 @@ import (
 	"billing-api/internal/domain"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
-	"encoding/base64"
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -347,25 +345,23 @@ func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit i
 	return payments, nextCursor, nil
 }
 
-func (s *BillingService) ListSchedules(ctx context.Context, loanID int64, limit int, cursor string) ([]*domain.LoanSchedule, *string, error) {
-	var lastSeq int32 = 0
+/*
+ListSchedules return all schedule records based on loan id
+*/
+func (s *BillingService) ListSchedules(ctx context.Context, loanID int64, limit int, cursor *domain.ScheduleCursor) ([]*domain.LoanSchedule, *domain.ScheduleCursor, error) {
 
-	// Decode base64 cursor
-	if cursor != "" {
-		decoded, err := base64.StdEncoding.DecodeString(cursor)
-		if err == nil {
-			if val, err := strconv.Atoi(string(decoded)); err == nil {
-				lastSeq = int32(val)
-			}
-		}
+	params := sqlc.ListSchedulesByLoanIDWithCursorParams{
+		LoanID:   loanID,
+		Limit:    int32(limit),
+		Sequence: 0, // Default to start from the beginning
+	}
+
+	if cursor != nil {
+		params.Sequence = cursor.Sequence
 	}
 
 	// Fetch using sequence-based pagination
-	rows, err := s.repo.ListSchedulesByLoanID(ctx, sqlc.ListSchedulesByLoanIDWithCursorParams{
-		LoanID:   loanID,
-		Sequence: lastSeq,
-		Limit:    int32(limit),
-	})
+	rows, err := s.repo.ListSchedulesByLoanID(ctx, params)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -376,11 +372,12 @@ func (s *BillingService) ListSchedules(ctx context.Context, loanID int64, limit 
 	}
 
 	// Generate Next Cursor
-	var nextCursor *string
+	var nextCursor *domain.ScheduleCursor
 	if len(schedules) == limit {
-		lastVal := strconv.Itoa(schedules[len(schedules)-1].Sequence)
-		encoded := base64.StdEncoding.EncodeToString([]byte(lastVal))
-		nextCursor = &encoded
+		lastItem := schedules[len(schedules)-1]
+		nextCursor = &domain.ScheduleCursor{
+			Sequence: int32(lastItem.Sequence),
+		}
 	}
 
 	return schedules, nextCursor, nil

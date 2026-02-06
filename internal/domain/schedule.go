@@ -5,14 +5,6 @@ import (
 	"time"
 )
 
-// internal/domain/schedule.go
-
-type ScheduleCursor struct {
-    Sequence int32 `json:"sequence"`
-}
-
-
-
 type LoanSchedule struct {
 	ID         int64
 	LoanID     int64

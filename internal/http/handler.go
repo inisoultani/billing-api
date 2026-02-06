@@ -2,6 +2,7 @@ package http
 
 import (
 	"billing-api/internal/config"
+	"billing-api/internal/domain"
 	"billing-api/internal/service"
 	"encoding/json"
 	"log"
@@ -193,9 +194,9 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 		limit = h.config.PagingLimitDefault
 	}
 
-	cursor, err := DecodeCursor(r)
+	cursor, err := DecodeCursor[domain.PaymentCursor](r)
 	if err != nil {
-		http.Error(w, "Invalid cursor format", http.StatusBadRequest)
+		http.Error(w, "Invalid payment cursor", http.StatusBadRequest)
 		return
 	}
 
@@ -223,7 +224,6 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// 1. Parse Loan ID from URL
 	loanIDStr := chi.URLParam(r, "loanID") // Assuming you use chi router
 	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
 	if err != nil {
@@ -241,18 +241,21 @@ func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 		limit = h.config.PagingLimitDefault
 	}
 
-	cursor := r.URL.Query().Get("cursor")
+	cursor, err := DecodeCursor[domain.ScheduleCursor](r)
+	if err != nil {
+		http.Error(w, "Invalid schedule cursor", http.StatusBadRequest)
+		return
+	}
 
-	// 3. Call Service Layer
-	schedules, nextCursor, err := h.billingService.ListSchedules(ctx, loanID, limit, cursor)
+	schedules, nextCursorObj, err := h.billingService.ListSchedules(ctx, loanID, limit, cursor)
 	if err != nil {
 		// Log error and return internal server error
 		http.Error(w, "Failed to retrieve schedules", http.StatusInternalServerError)
 		return
 	}
 
-	// 4. Map and Respond
-	response := ToListScheduleResponse(schedules, nextCursor)
+	nextCursorStr, _ := EncodeCursor(nextCursorObj)
+	response := ToListScheduleResponse(schedules, nextCursorStr)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

@@ -124,6 +124,25 @@ func TestSubmitPayment_Mock(t *testing.T) {
 			TotalWeeks:          5,
 		}, nil).Once()
 
+		mockScheduleID := int64(12)
+
+		// This finds the schedule record for Week 1
+		mockRepo.On("GetScheduleBySequence", mock.Anything, sqlc.GetScheduleBySequenceParams{
+			LoanID:   input.LoanID,
+			Sequence: 1,
+		}).Return(sqlc.Schedule{
+			ID:       mockScheduleID, // Arbitrary ID for the schedule record
+			LoanID:   1,
+			Sequence: 1,
+			Amount:   110000,
+		}, nil).Once()
+
+		// This updates the schedule record with the payment amount
+		mockRepo.On("UpdateSchedulePayment", mock.Anything, sqlc.UpdateSchedulePaymentParams{
+			ID:         mockScheduleID, // Matches the ID returned by GetScheduleBySequence
+			PaidAmount: input.Amount,
+		}).Return(sqlc.Schedule{}, nil).Once()
+
 		mockRepo.On("GetPaidWeeksCount", mock.Anything, input.LoanID).Return(int32(0), nil).Once()
 
 		mockRepo.On("GetTotalPaidAmount", mock.Anything, input.LoanID).Return(int64(0), nil).Once()

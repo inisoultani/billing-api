@@ -1,7 +1,6 @@
 package http
 
 import (
-	"billing-api/internal/domain"
 	"encoding/base64"
 	"encoding/json"
 )
@@ -17,7 +16,8 @@ type submitPaymentRequest struct {
 	Amount int64 `json:"amount"`
 }
 
-func EncodeCursor(cursor *domain.PaymentCursor) (*string, error) {
+// EncodeCursor generic function to encode any struct into a base64 string
+func EncodeCursor[T any](cursor *T) (*string, error) {
 	if cursor == nil {
 		return nil, nil
 	}
