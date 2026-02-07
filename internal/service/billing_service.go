@@ -100,6 +100,7 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 				Sequence: int32(i),
 				DueDate:  pgtype.Date{Time: dueDate, Valid: true},
 				Amount:   weeklyPayment,
+				Status:   "PENDING",
 			}
 		}
 
