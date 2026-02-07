@@ -51,16 +51,23 @@ func (q *Queries) GetTotalPaidAmount(ctx context.Context, loanID int64) (int64, 
 }
 
 const insertPayment = `-- name: InsertPayment :one
-INSERT INTO payments (loan_id, week_number, amount, paid_at)
-VALUES ($1, $2, $3, $4)
-RETURNING id, loan_id, week_number, amount, paid_at, created_at
+INSERT INTO payments (
+    loan_id,
+    week_number,
+    amount,
+    idempotency_key,
+    paid_at
+  )
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, loan_id, week_number, amount, idempotency_key, paid_at, created_at
 `
 
 type InsertPaymentParams struct {
-	LoanID     int64
-	WeekNumber int32
-	Amount     int64
-	PaidAt     pgtype.Timestamp
+	LoanID         int64
+	WeekNumber     int32
+	Amount         int64
+	IdempotencyKey string
+	PaidAt         pgtype.Timestamp
 }
 
 func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (Payment, error) {
@@ -68,6 +75,7 @@ func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (P
 		arg.LoanID,
 		arg.WeekNumber,
 		arg.Amount,
+		arg.IdempotencyKey,
 		arg.PaidAt,
 	)
 	var i Payment
@@ -76,6 +84,7 @@ func (q *Queries) InsertPayment(ctx context.Context, arg InsertPaymentParams) (P
 		&i.LoanID,
 		&i.WeekNumber,
 		&i.Amount,
+		&i.IdempotencyKey,
 		&i.PaidAt,
 		&i.CreatedAt,
 	)

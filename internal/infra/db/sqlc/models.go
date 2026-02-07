@@ -20,12 +20,13 @@ type Loan struct {
 }
 
 type Payment struct {
-	ID         int64
-	LoanID     int64
-	WeekNumber int32
-	Amount     int64
-	PaidAt     pgtype.Timestamp
-	CreatedAt  pgtype.Timestamp
+	ID             int64
+	LoanID         int64
+	WeekNumber     int32
+	Amount         int64
+	IdempotencyKey string
+	PaidAt         pgtype.Timestamp
+	CreatedAt      pgtype.Timestamp
 }
 
 type Schedule struct {

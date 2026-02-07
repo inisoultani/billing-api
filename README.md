@@ -232,9 +232,16 @@ Returns the total remaining amount required to fully pay off the loan.
 
 **POST** `/{loanID}/payment`
 
-Submits a payment for the next sequential unpaid week.
+Processes a weekly payment for the next sequential unpaid week. The system enforces strict validation and idempotency to ensure the payment matches the expected schedule and prevents duplicate transactions.
 
-- **Request Body**:
+#### **Headers**
+
+| Name                  | Type     | Required | Description                                                     |
+| --------------------- | -------- | -------- | --------------------------------------------------------------- |
+| **X-Idempotency-Key** | `string` | **Yes**  | A unique identifier (e.g., UUID) to prevent duplicate payments. |
+| **Content-Type**      | `string` | **Yes**  | Must be `application/json`.                                     |
+
+#### **Request Body**
 
 ```json
 {
@@ -242,13 +249,36 @@ Submits a payment for the next sequential unpaid week.
 }
 ```
 
-- **Success Response (201 Created)**:
+- **amount**: Must exactly match the `weekly_payment_amount` defined during loan creation.
+
+#### **Success Responses**
+
+**1. New Payment Processed (201 Created)**
+Returned when a payment is successfully recorded for the first time.
 
 ```json
 {
   "payment_id": 987
 }
 ```
+
+**2. Duplicate Request (200 OK)**
+Returned when the provided `X-Idempotency-Key` has already been processed for this loan.
+
+```json
+{
+  "message": "payment already processed",
+  "status": "success"
+}
+```
+
+---
+
+### Business Logic Summary
+
+- **Sequential Processing**: Payments apply strictly to the next unpaid week.
+- **Exact Amount**: Only the exact weekly amount is accepted.
+- **Delinquency**: Calculated as a gap of weeks between the expected week and the last paid week.
 
 ### 5. List payment Schedules
 

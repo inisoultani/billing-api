@@ -10,7 +10,8 @@ type SubmitLoanInput struct {
 }
 
 type SubmitPaymentInput struct {
-	LoanID int64
-	Amount int64
-	PaidAt time.Time
+	LoanID         int64
+	Amount         int64
+	PaidAt         time.Time
+	IdempotencyKey string // Sent from Frontend Header
 }

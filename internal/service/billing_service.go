@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -17,6 +18,7 @@ var (
 	ErrInvalidLoanTerms        = errors.New("Invalid loan terms")
 	ErrInvalidPayment          = errors.New("Invalid payment")
 	ErrLoanAlreadyClosed       = errors.New("Loan already fully paid")
+	ErrDuplicatePayment        = errors.New("Duplicate payment for current week")
 )
 
 type BillingService struct {
@@ -184,15 +186,20 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		}
 
 		payment, err := repo.InsertPayment(ctx, sqlc.InsertPaymentParams{
-			LoanID:     input.LoanID,
-			WeekNumber: nextWeek,
-			Amount:     input.Amount,
+			LoanID:         input.LoanID,
+			WeekNumber:     nextWeek,
+			Amount:         input.Amount,
+			IdempotencyKey: input.IdempotencyKey,
 			PaidAt: pgtype.Timestamp{
 				Time:  input.PaidAt,
 				Valid: true,
 			},
 		})
 		if err != nil {
+			if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+				// This is a "Duplicate" error.
+				return ErrDuplicatePayment
+			}
 			return err
 		}
 

@@ -26,8 +26,14 @@ SELECT COALESCE(SUM(amount), 0)::BIGINT AS total_paid
 FROM payments
 WHERE loan_id = $1;
 -- name: InsertPayment :one
-INSERT INTO payments (loan_id, week_number, amount, paid_at)
-VALUES ($1, $2, $3, $4)
+INSERT INTO payments (
+    loan_id,
+    week_number,
+    amount,
+    idempotency_key,
+    paid_at
+  )
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 -- name: GetLastPaidWeek :one
 SELECT COALESCE(MAX(week_number), 0)::INT AS last_paid_week

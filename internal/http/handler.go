@@ -3,7 +3,9 @@ package http
 import (
 	"billing-api/internal/config"
 	"billing-api/internal/domain"
+	"billing-api/internal/http/middleware"
 	"billing-api/internal/service"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -146,10 +148,19 @@ func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// extract idempotency key
+	idempotencyKey := GetIdempotencyKey(r.Context())
+	if idempotencyKey == "" {
+		log.Printf("Request failed due to not providing X-Idempotency-Key")
+		http.Error(w, "X-Idempotency-Key header is required", http.StatusBadRequest)
+		return
+	}
+
 	id, err := h.billingService.SubmitPayment(r.Context(), service.SubmitPaymentInput{
-		LoanID: loanID,
-		Amount: req.Amount,
-		PaidAt: time.Now(),
+		LoanID:         loanID,
+		Amount:         req.Amount,
+		PaidAt:         time.Now(),
+		IdempotencyKey: idempotencyKey,
 	})
 
 	if err != nil {
@@ -160,6 +171,13 @@ func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid payment amount", http.StatusBadRequest)
 		case service.ErrLoanAlreadyClosed:
 			http.Error(w, "Loan already closed", http.StatusConflict)
+		case service.ErrDuplicatePayment:
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]string{
+				"status":  "success",
+				"message": "payment already processed",
+			})
 		default:
 			log.Printf("Error submit payment %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
@@ -261,4 +279,13 @@ func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 
+}
+
+// GetIdempotencyKey safely retrieves the key from context
+func GetIdempotencyKey(ctx context.Context) string {
+	val, ok := ctx.Value(middleware.IdempotencyKey).(string)
+	if !ok {
+		return ""
+	}
+	return val
 }

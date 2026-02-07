@@ -5,6 +5,8 @@ import (
 	"billing-api/internal/service"
 	"net/http"
 
+	billingApiMiddleware "billing-api/internal/http/middleware"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -30,8 +32,12 @@ func NewRouter(billingService *service.BillingService, cfg *config.Config) http.
 		r.Get("/{loanID}", h.GetLoanByID)
 		r.Get("/{loanID}/outstanding", h.GetOutstanding)
 		r.Get("/{loanID}/payment", h.ListPayments)
-		r.Post("/{loanID}/payment", h.MakePayment)
 		r.Get("/{loanID}/schedule", h.ListSchedules)
+
+		r.Group(func(r chi.Router) {
+			r.Use(billingApiMiddleware.IdempotencyMiddleware)
+			r.Post("/{loanID}/payment", h.MakePayment)
+		})
 	})
 
 	return r

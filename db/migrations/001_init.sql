@@ -16,9 +16,11 @@ CREATE TABLE payments (
   loan_id BIGINT NOT NULL REFERENCES loans(id),
   week_number INT NOT NULL,
   amount BIGINT NOT NULL,
+  idempotency_key VARCHAR(255) NOT NULL,
   paid_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT now(),
-  UNIQUE (loan_id, week_number)
+  CONSTRAINT uk_payments_loan_id_and_week_number UNIQUE (loan_id, week_number),
+  CONSTRAINT uk_payments_idempotency_key UNIQUE (idempotency_key)
 );
 CREATE INDEX idx_repayments_loan_id ON payments(loan_id);
 CREATE INDEX idx_repayments_loan_week ON payments(loan_id, week_number);
