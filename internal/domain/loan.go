@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"billing-api/internal/infra/db/sqlc"
+	"time"
+)
 
 type Loan struct {
 	ID                  int64
@@ -9,4 +12,15 @@ type Loan struct {
 	WeeklyPaymentAmount int64
 	TotalWeeks          int
 	CreatedAt           time.Time
+}
+
+func MapLoan(l sqlc.Loan) *Loan {
+	return &Loan{
+		ID:                  l.ID,
+		PrincipalAmount:     l.PrincipalAmount,
+		TotalPayableAmount:  l.TotalPayableAmount,
+		WeeklyPaymentAmount: l.WeeklyPaymentAmount,
+		TotalWeeks:          int(l.TotalWeeks),
+		CreatedAt:           l.CreatedAt.Time,
+	}
 }

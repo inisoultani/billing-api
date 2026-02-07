@@ -1,4 +1,4 @@
--- name: CreateLoanSchedule :one
+-- name: CreateLoanSchedules :copyfrom
 INSERT INTO schedules (
     loan_id,
     sequence,
@@ -6,8 +6,7 @@ INSERT INTO schedules (
     amount,
     status
   )
-VALUES ($1, $2, $3, $4, 'PENDING')
-RETURNING *;
+VALUES ($1, $2, $3, $4, $5);
 -- name: ListSchedulesByLoanIDWithCursor :many
 SELECT *
 FROM schedules

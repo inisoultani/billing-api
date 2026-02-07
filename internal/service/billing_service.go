@@ -19,56 +19,9 @@ var (
 	ErrLoanAlreadyClosed       = errors.New("Loan already fully paid")
 )
 
-type SubmitLoanInput struct {
-	PrincipalAmount    int64
-	AnnualInterestRate float64 // e.g. 0.10
-	TotalWeeks         int
-	StartDate          time.Time
-}
-
-type SubmitPaymentInput struct {
-	LoanID int64
-	Amount int64
-	PaidAt time.Time
-}
-
 type BillingService struct {
 	pool *pgxpool.Pool
 	repo domain.BillingRepository
-}
-
-func mapLoan(l sqlc.Loan) *domain.Loan {
-	return &domain.Loan{
-		ID:                  l.ID,
-		PrincipalAmount:     l.PrincipalAmount,
-		TotalPayableAmount:  l.TotalPayableAmount,
-		WeeklyPaymentAmount: l.WeeklyPaymentAmount,
-		TotalWeeks:          int(l.TotalWeeks),
-		CreatedAt:           l.CreatedAt.Time,
-	}
-}
-
-func mapPayment(p sqlc.ListPaymentsByLoanIDRow) *domain.Payment {
-	return &domain.Payment{
-		ID:         p.ID,
-		WeekNumber: int(p.WeekNumber),
-		Amount:     p.Amount,
-		PaidAt:     p.PaidAt.Time,
-	}
-}
-
-/*
-weekSince internal helper method to calculte week duration between 2 different time
-*/
-func weekSince(start, now time.Time) int {
-	if now.Before(start) {
-		return 0
-	}
-
-	duration := now.Sub(start)
-	weeks := int(duration.Hours() / (24 * 7))
-
-	return weeks + 1
 }
 
 // constructor
@@ -90,7 +43,7 @@ func (s *BillingService) GetLoanByID(ctx context.Context, loanID int64) (*domain
 		return nil, ErrLoanNotFound
 	}
 
-	return mapLoan(loan), nil
+	return domain.MapLoan(loan), nil
 }
 
 /*
@@ -136,21 +89,27 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 			return err
 		}
 
-		// generate Schedules
+		// generate Schedules with batch insert instead of multiple insert
+		schedules := make([]sqlc.CreateLoanSchedulesParams, input.TotalWeeks)
+
 		for i := 1; i <= input.TotalWeeks; i++ {
-			dueDate := input.StartDate.AddDate(0, 0, 7*i) // Weekly increment
-			_, err := repo.CreateLoanSchedule(ctx, sqlc.CreateLoanScheduleParams{
+			dueDate := input.StartDate.AddDate(0, 0, 7*i)
+
+			schedules[i-1] = sqlc.CreateLoanSchedulesParams{
 				LoanID:   loan.ID,
 				Sequence: int32(i),
 				DueDate:  pgtype.Date{Time: dueDate, Valid: true},
 				Amount:   weeklyPayment,
-			})
-			if err != nil {
-				return err
 			}
 		}
 
-		domainLoan = mapLoan(loan)
+		// One single database call
+		_, err = repo.CreateLoanSchedules(ctx, schedules)
+		if err != nil {
+			return err
+		}
+
+		domainLoan = domain.MapLoan(loan)
 		return nil
 	})
 
@@ -330,7 +289,7 @@ func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit i
 
 	payments := make([]*domain.Payment, 0, len(rows))
 	for _, r := range rows {
-		payments = append(payments, mapPayment(r))
+		payments = append(payments, domain.MapPayment(r))
 	}
 
 	var nextCursor *domain.PaymentCursor

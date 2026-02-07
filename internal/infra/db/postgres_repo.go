@@ -69,18 +69,23 @@ func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPa
 	return r.queries.ListPaymentsByLoanID(ctx, arg)
 }
 
-func (r *PostgresRepo) CreateLoanSchedule(ctx context.Context, arg sqlc.CreateLoanScheduleParams) (sqlc.Schedule, error) {
-	return r.queries.CreateLoanSchedule(ctx, arg)
+// SCHEDULE RELATED
+// CreateLoanSchedule record schedule during loan creation
+func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []sqlc.CreateLoanSchedulesParams) (int64, error) {
+	return r.queries.CreateLoanSchedules(ctx, arg)
 }
 
+// ListSchedulesByLoanID handle paginated retrieval of schedules
 func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListSchedulesByLoanIDWithCursorParams) ([]sqlc.Schedule, error) {
 	return r.queries.ListSchedulesByLoanIDWithCursor(ctx, arg)
 }
 
+// UpdateSchedulePayment update related schedule based payment sequence
 func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error) {
 	return r.queries.UpdateSchedulePayment(ctx, arg)
 }
 
+// GetScheduleBySequence retrieve schedule based on sequence
 func (r *PostgresRepo) GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error) {
 	return r.queries.GetScheduleBySequence(ctx, arg)
 }

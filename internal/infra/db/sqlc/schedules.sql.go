@@ -11,45 +11,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createLoanSchedule = `-- name: CreateLoanSchedule :one
-INSERT INTO schedules (
-    loan_id,
-    sequence,
-    due_date,
-    amount,
-    status
-  )
-VALUES ($1, $2, $3, $4, 'PENDING')
-RETURNING id, loan_id, sequence, due_date, amount, paid_amount, status, created_at, updated_at
-`
-
-type CreateLoanScheduleParams struct {
+type CreateLoanSchedulesParams struct {
 	LoanID   int64
 	Sequence int32
 	DueDate  pgtype.Date
 	Amount   int64
-}
-
-func (q *Queries) CreateLoanSchedule(ctx context.Context, arg CreateLoanScheduleParams) (Schedule, error) {
-	row := q.db.QueryRow(ctx, createLoanSchedule,
-		arg.LoanID,
-		arg.Sequence,
-		arg.DueDate,
-		arg.Amount,
-	)
-	var i Schedule
-	err := row.Scan(
-		&i.ID,
-		&i.LoanID,
-		&i.Sequence,
-		&i.DueDate,
-		&i.Amount,
-		&i.PaidAmount,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	Status   string
 }
 
 const getScheduleBySequence = `-- name: GetScheduleBySequence :one

@@ -8,6 +8,14 @@ services:
       POSTGRES_USER: billing
       POSTGRES_PASSWORD: billing
       POSTGRES_DB: billing
+    command:
+      - "postgres"
+      - "-c"
+      - "log_statement=all" # Logs every SQL query
+      - "-c"
+      - "log_duration=on" # Logs how long each query took
+      - "-c"
+      - "log_line_prefix='%m [%p] '" # Adds timestamp and process ID
     ports:
       - "5432:5432"
     volumes:
