@@ -91,7 +91,7 @@ func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) {
 		StartDate:          startDate,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.HandleError(w, r, err)
 		return
 	}
 
