@@ -356,3 +356,21 @@ Run unit tests only for the internal/service package:
 ```bash
 go test ./internal/service
 ```
+
+## 8. Resilience & Observability
+
+The system implements sampling **Smart Context Timeouts** to protect the database connection pool and simplify debugging:
+
+- **Dynamic Deadlines:** Timeouts scale with workload (e.g., **2s** for single rows, up to **10s** for batch inserts).
+- **Precise Attribution:** Uses `context.Cause` to label specific operations in the logs.
+- **Fail-Fast:** Aborts database queries immediately upon timeout or user cancellation.
+- **Standardized Responses:** Maps repository failures to **HTTP 504 Gateway Timeout**.
+
+**Log Sample:**
+
+```bash
+# pinpointing exactly which query exceeded its allocated limit
+[TIMEOUT] POST /payments: repo_timeout: CreatePayment (limit 2s)
+[TIMEOUT] POST /loans: repo_timeout: BatchSchedules (limit 7.2s)
+
+```
