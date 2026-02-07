@@ -13,6 +13,11 @@ type Config struct {
 	PagingLimitDefault int
 	PagingLimitMax     int
 	ServerPort         string
+	MaxConns           int
+	MinConns           int
+	MaxConnIdleTime    int
+	MaxConnLifeTime    int
+	HealthCheckPeriod  int
 }
 
 func Load() (*Config, error) {
@@ -30,6 +35,11 @@ func Load() (*Config, error) {
 		PagingLimitDefault: getEnvInt("PAGING_LIMIT_DEFAULT", 10),
 		PagingLimitMax:     getEnvInt("PAGING_LIMIT_MAX", 100),
 		ServerPort:         getEnv("SERVER_PORT", "8081"),
+		MaxConns:           getEnvInt("DB_MAX_CONNS", 20),
+		MinConns:           getEnvInt("DB_MIN_CONNS", 5),
+		MaxConnIdleTime:    getEnvInt("DB_MAX_IDLE_TIME", 300),
+		MaxConnLifeTime:    getEnvInt("DB_MAX_LIFE_TIME", 1800),
+		HealthCheckPeriod:  getEnvInt("DB_HEALTH_CHECK_PERIOD", 60),
 	}, nil
 }
 

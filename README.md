@@ -38,6 +38,11 @@ Create a `.env` file in the project root. This file **must be ignored by git** f
 ```bash
 # Database connection
 DATABASE_URL=postgres://billing:billing@localhost:5432/billing?sslmode=disable
+DB_MAX_CONNS=30
+DB_MIN_CONNS=5
+DB_MAX_IDLE_TIME=200 # in seconds
+DB_MAX_LIFE_TIME=900 # in seconds
+DB_HEALTH_CHECK_PERIOD=30 # in seconds
 
 # Application settings
 SERVER_PORT=8081
