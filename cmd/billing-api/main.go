@@ -54,6 +54,9 @@ func main() {
 
 	<-stop
 
+	log.Println("closing all db connections...")
+	pool.Close()
+
 	log.Println("shutting down billing-api server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
