@@ -1,6 +1,6 @@
 # Billing API – Local Setup & Usage Guide
 
-A high-performance Go service for managing loan repayments, featuring type-safe SQL with `sqlc` and efficient cursor-based pagination.
+A high-performance Go service for managing loan payments, featuring type-safe SQL with `sqlc` and efficient cursor-based pagination.
 
 ---
 
@@ -142,105 +142,158 @@ The project follows a clean separation of concerns and is organized as follows:
 
 ---
 
-## 5. API Usage
+## 5. Billing API Documentation
 
-### Get Loan Details
+This API manages loan lifecycles, including creation, automated payment scheduling, payment processing, and real-time delinquency tracking.
 
-Returns detailed information for a specific loan, including derived state.
+## Base URL
 
-**Endpoint**
-
-```
-GET /loan/:id
-```
-
-**Path Parameters**
-
-| Name | Description                   |
-| ---- | ----------------------------- |
-| id   | Unique identifier of the loan |
+`http://<host>:<port>/loan`
 
 ---
 
-### Example Request
+## 📋 Endpoints Summary
 
-```bash
-curl "http://localhost:8081/loan/1"
-```
+| Method   | Endpoint                | Description                                   |
+| -------- | ----------------------- | --------------------------------------------- |
+| **POST** | `/`                     | Create a new loan and generate schedules.     |
+| **GET**  | `/{loanID}`             | Retrieve loan details and delinquency status. |
+| **GET**  | `/{loanID}/outstanding` | Get the remaining balance to be paid.         |
+| **GET**  | `/{loanID}/schedule`    | List repayment schedules (paginated).         |
+| **POST** | `/{loanID}/payment`     | Submit a weekly payment.                      |
+| **GET**  | `/{loanID}/payment`     | List payment history (paginated).             |
 
 ---
 
-### Success Response
+## Endpoint Details
+
+### 1. Submit Loan
+
+**POST** `/`
+
+Creates a new loan record and generates all weekly schedules for the duration of the loan.
+
+- **Request Body**:
 
 ```json
 {
-  "loan_id": 1,
+  "principal_amount": 5000000,
+  "annual_interest_rate": 0.1,
+  "total_weeks": 50,
+  "start_date": "2026-02-07"
+}
+```
+
+- **Success Response (201 Created)**:
+
+```json
+{
+  "loan_id": 123,
+  "weekly_payment_amount": 110000,
+  "total_payable": 5500000
+}
+```
+
+### 2. Get Loan Details
+
+**GET** `/{loanID}`
+
+Returns core loan data, including the on-the-fly calculated delinquency status.
+
+- **Success Response (200 OK)**:
+
+```json
+{
+  "loan_id": 123,
+  "weekly_payment_amount": 110000,
   "total_payable": 5500000,
-  "weekly_payment_amount": 1100000,
-  "total_weeks": 5,
-  "created_at": "2026-01-05T10:31:33Z",
-  "is_delinquent": true
+  "total_weeks": 50,
+  "created_at": "2026-02-07T10:00:00Z",
+  "is_delinquent": false
 }
 ```
 
-Notes
+### 3. Get Outstanding Balance
 
-- `is_delinquent` is a derived field computed at read time
-- The value is not persisted in the database
-- See `ADR-002: Derived states are computed dynamically`
+**GET** `/{loanID}/outstanding`
 
----
+Returns the total remaining amount required to fully pay off the loan.
 
-### List Payments (Cursor-Based Pagination)
-
-Returns a paginated list of payments for a specific loan.
-
-**Endpoint**
-
-```
-GET /loan/:id/payment
-```
-
-**Query Parameters**
-
-| Name   | Description                                 |
-| ------ | ------------------------------------------- |
-| limit  | Number of records to return (default: 10)   |
-| cursor | Base64URL-encoded cursor from previous page |
-
----
-
-### Example Request
-
-```bash
-curl "http://localhost:8081/loan/3/payment?limit=2"
-```
-
----
-
-### Success Response
+- **Success Response (200 OK)**:
 
 ```json
 {
-  "payments": [
-    {
-      "week_number": 1,
-      "amount": 1100000,
-      "paid_at": "2026-02-05T17:31:40Z"
-    },
-    {
-      "week_number": 2,
-      "amount": 1100000,
-      "paid_at": "2026-02-05T17:31:42Z"
-    }
-  ],
-  "next_cursor": "eyJQYWlkQXQiOiIyMDI2LTAyLTA1VDE3OjMxOjQyLjAxNDQzMloiLCJJRCI6Mn0"
+  "loan_id": 123,
+  "outstanding": 4400000
 }
 ```
 
-- `payments` are ordered deterministically by payment time.
-- `next_cursor` should be passed to the next request to retrieve the next page.
-- If `next_cursor` is omitted, there are no more results.
+### 4. Make Payment
+
+**POST** `/{loanID}/payment`
+
+Submits a payment for the next sequential unpaid week.
+
+- **Request Body**:
+
+```json
+{
+  "amount": 110000
+}
+```
+
+- **Success Response (201 Created)**:
+
+```json
+{
+  "payment_id": 987
+}
+```
+
+### 5. List payment Schedules
+
+**GET** `/{loanID}/schedule?limit=10&cursor=...`
+
+Retrieves the generated weekly schedules using sequence-based pagination.
+
+- **Query Params**: `limit` (int), `cursor` (encoded sequence string).
+
+### 6. List Payments
+
+**GET** `/{loanID}/payment?limit=10&cursor=...`
+
+Retrieves the history of payments made for this loan using cursor-based pagination.
+
+---
+
+## Core Business Logic
+
+### Loan Terms
+
+- **Interest Model**: The system uses a flat interest rate applied once to the full principal.
+- **Divisibility Constraint**: The total payable amount must be evenly divisible by the total number of weeks to ensure consistent weekly payments.
+
+### Delinquency Criteria
+
+- **Derived State**: Delinquency is calculated on demand rather than stored.
+- **Threshold**: A loan is considered delinquent if there is a gap of **2 or more weeks** between the last paid week and the current expected week (based on the loan start date).
+
+### Payment Validation
+
+- **Sequential Payment**: Payments must apply to the next unpaid week in order.
+- **Exact Amount**: Every payment must exactly match the `weekly_payment_amount`.
+- **Closure**: Payments are rejected once all weeks in the schedule are paid.
+
+---
+
+## Error Responses
+
+| Code    | Meaning        | Cause                                                                  |
+| ------- | -------------- | ---------------------------------------------------------------------- |
+| **400** | Bad Request    | Invalid input format, invalid loan terms, or incorrect payment amount. |
+| **404** | Not Found      | The specified loan ID does not exist.                                  |
+| **409** | Conflict       | Attempting to pay for a loan that is already closed/fully paid.        |
+| **500** | Internal Error | Database failure or internal processing error.                         |
 
 ---
 
@@ -274,8 +327,3 @@ Run unit tests only for the internal/service package:
 ```bash
 go test ./internal/service
 ```
-
-## Notes
-
-- Derived states (e.g. delinquency) are computed dynamically and not persisted.
-- Pagination is **cursor-based**, not offset-based, for correctness and performance.
