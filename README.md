@@ -278,7 +278,6 @@ Returned when the provided `X-Idempotency-Key` has already been processed for th
 
 - **Sequential Processing**: Payments apply strictly to the next unpaid week.
 - **Exact Amount**: Only the exact weekly amount is accepted.
-- **Delinquency**: Calculated as a gap of weeks between the expected week and the last paid week.
 
 ### 5. List payment Schedules
 
