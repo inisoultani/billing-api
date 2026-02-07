@@ -156,7 +156,12 @@ func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.billingService.SubmitPayment(r.Context(), service.SubmitPaymentInput{
+	// sample on implementing hybrid timeout management
+	// the policy that cover entire service+repo process,
+	// while we later set dedicated limit on each repo process within the service
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	id, err := h.billingService.SubmitPayment(ctx, service.SubmitPaymentInput{
 		LoanID:         loanID,
 		Amount:         req.Amount,
 		PaidAt:         time.Now(),
@@ -164,24 +169,7 @@ func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		switch err {
-		case service.ErrLoanNotFound:
-			http.Error(w, "Loan not found", http.StatusNotFound)
-		case service.ErrInvalidPayment:
-			http.Error(w, "Invalid payment amount", http.StatusBadRequest)
-		case service.ErrLoanAlreadyClosed:
-			http.Error(w, "Loan already closed", http.StatusConflict)
-		case service.ErrDuplicatePayment:
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{
-				"status":  "success",
-				"message": "payment already processed",
-			})
-		default:
-			log.Printf("Error submit payment %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-		}
+		h.HandleError(w, r, err)
 		return
 	}
 

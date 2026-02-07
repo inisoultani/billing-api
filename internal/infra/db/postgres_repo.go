@@ -4,6 +4,9 @@ import (
 	"billing-api/internal/domain"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
+	"errors"
+	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,6 +22,40 @@ func NewPostgresRepo(pool *pgxpool.Pool) *PostgresRepo {
 		pool:    pool,
 		queries: sqlc.New(pool),
 	}
+}
+
+func getContextWithTimeout(ctx context.Context, label string, rowCount int) (context.Context, context.CancelFunc) {
+	// base timeout
+	timeout := 2 * time.Second
+
+	// add 50ms per row for batch
+	if rowCount > 1 {
+		timeout += time.Duration(rowCount) * 50 * time.Millisecond
+	}
+
+	// cap time to 10sec
+	if timeout > 10*time.Second {
+		timeout = 10 * time.Second
+	}
+
+	cause := fmt.Errorf("repo-timeout : %s limit was (%v)", label, timeout)
+	return context.WithTimeoutCause(ctx, timeout, cause)
+}
+
+func runWithTimeout[T any](ctx context.Context, r *PostgresRepo, label string, rowCount int, fn func(context.Context) (T, error)) (T, error) {
+	childCtx, cancel := getContextWithTimeout(ctx, label, rowCount)
+	defer cancel()
+
+	t, err := fn(childCtx)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			// return the custom cause as the error itself
+			var zero T
+			return zero, context.Cause(childCtx)
+		}
+		return t, err
+	}
+	return t, nil
 }
 
 func (r *PostgresRepo) WithTx(ctx context.Context, fn func(repo domain.BillingRepository) error) error {
@@ -40,7 +77,10 @@ func (r *PostgresRepo) GetLoanByID(ctx context.Context, id int64) (sqlc.Loan, er
 
 // InsertLoan creates a new loan record
 func (r *PostgresRepo) InsertLoan(ctx context.Context, arg sqlc.InsertLoanParams) (sqlc.Loan, error) {
-	return r.queries.InsertLoan(ctx, arg)
+	// set proper timeout for this process
+	return runWithTimeout(ctx, r, "Insert Loan", 1, func(timeoutCtx context.Context) (sqlc.Loan, error) {
+		return r.queries.InsertLoan(ctx, arg)
+	})
 }
 
 // PAYMENT RELATED
@@ -72,7 +112,11 @@ func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPa
 // SCHEDULE RELATED
 // CreateLoanSchedule record schedule during loan creation
 func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []sqlc.CreateLoanSchedulesParams) (int64, error) {
-	return r.queries.CreateLoanSchedules(ctx, arg)
+	// specifically set timeout for this particular process
+	// for insert loan in self there will dedicate timout
+	return runWithTimeout(ctx, r, "Batch insert schedule", len(arg), func(timeoutCtx context.Context) (int64, error) {
+		return r.queries.CreateLoanSchedules(ctx, arg)
+	})
 }
 
 // ListSchedulesByLoanID handle paginated retrieval of schedules
@@ -82,7 +126,9 @@ func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListS
 
 // UpdateSchedulePayment update related schedule based payment sequence
 func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error) {
-	return r.queries.UpdateSchedulePayment(ctx, arg)
+	return runWithTimeout(ctx, r, "Update schedule payment", 1, func(timeoutCtx context.Context) (sqlc.Schedule, error) {
+		return r.queries.UpdateSchedulePayment(ctx, arg)
+	})
 }
 
 // GetScheduleBySequence retrieve schedule based on sequence

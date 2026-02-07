@@ -5,6 +5,7 @@ import (
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -212,7 +213,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		if err != nil {
 			return err
 		}
-
+		log.Printf("schedule id that going to be updated : %d\n", sch.ID)
 		_, err = repo.UpdateSchedulePayment(ctx, sqlc.UpdateSchedulePaymentParams{
 			ID:         sch.ID,
 			PaidAmount: input.Amount,
