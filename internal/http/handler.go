@@ -72,17 +72,15 @@ func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(resp)
 }
 
-func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) error {
 	var req submitLoanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
+		return BadRequest("Invalid request body", err)
 	}
 
 	startDate, err := time.Parse("2006-01-02", req.StartDate)
 	if err != nil {
-		http.Error(w, "Invalid start_date", http.StatusBadRequest)
-		return
+		return BadRequest("Invalid start_date", err)
 	}
 
 	loan, err := h.billingService.SubmitLoan(r.Context(), service.SubmitLoanInput{
@@ -92,8 +90,7 @@ func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) {
 		StartDate:          startDate,
 	})
 	if err != nil {
-		h.HandleError(w, r, err)
-		return
+		return err
 	}
 
 	resp := submitLoanResponse{
@@ -104,7 +101,7 @@ func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	return json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) GetOutstanding(w http.ResponseWriter, r *http.Request) {
