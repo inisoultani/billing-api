@@ -29,6 +29,15 @@ func BadRequest(msg string, internalError error) error {
 	}
 }
 
+// we'll reuse this within handler as default return object for internal error 500
+func InternalError(msg string, internalError error) error {
+	return &AppError{
+		Code:    http.StatusInternalServerError,
+		Message: msg,
+		Err:     internalError,
+	}
+}
+
 func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error) {
 	if err == nil {
 		return

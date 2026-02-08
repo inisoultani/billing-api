@@ -31,7 +31,7 @@ func NewRouter(billingService *service.BillingService, cfg *config.Config) http.
 		r.Post("/", h.MakeHandler(h.SubmitLoan))
 		r.Get("/{loanID}", h.MakeHandler(h.GetLoanByID))
 		r.Get("/{loanID}/outstanding", h.MakeHandler(h.GetOutstanding))
-		r.Get("/{loanID}/payment", h.ListPayments)
+		r.Get("/{loanID}/payment", h.MakeHandler(h.ListPayments))
 		r.Get("/{loanID}/schedule", h.ListSchedules)
 
 		r.Group(func(r chi.Router) {
