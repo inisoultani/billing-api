@@ -208,21 +208,19 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(resp)
 }
 
-func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 
 	loanIDStr := chi.URLParam(r, "loanID") // Assuming you use chi router
 	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid loan id", http.StatusBadRequest)
-		return
+		return BadRequest("Invalid loan ID", err)
 	}
 
 	limitStr := r.URL.Query().Get("limit")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
-		http.Error(w, "Invalid page limit number", http.StatusBadRequest)
-		return
+		return BadRequest("Invalid page limit number", err)
 	}
 	if limit <= 0 || limit > h.config.PagingLimitMax {
 		limit = h.config.PagingLimitDefault
@@ -230,24 +228,23 @@ func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := DecodeCursor[domain.ScheduleCursor](r)
 	if err != nil {
-		http.Error(w, "Invalid schedule cursor", http.StatusBadRequest)
-		return
+		return BadRequest("Invalid schedule cursor", err)
 	}
 
 	schedules, nextCursorObj, err := h.billingService.ListSchedules(ctx, loanID, limit, cursor)
 	if err != nil {
-		// Log error and return internal server error
-		http.Error(w, "Failed to retrieve schedules", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	nextCursorStr, _ := EncodeCursor(nextCursorObj)
+	nextCursorStr, err := EncodeCursor(nextCursorObj)
+	if err != nil {
+		return InternalError("Error encoding next cursor", err)
+	}
 	response := ToListScheduleResponse(schedules, nextCursorStr)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-
+	return json.NewEncoder(w).Encode(response)
 }
 
 // GetIdempotencyKey safely retrieves the key from context
