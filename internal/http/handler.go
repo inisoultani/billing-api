@@ -15,6 +15,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
+
 type Handler struct {
 	billingService *service.BillingService
 	config         *config.Config
@@ -27,22 +29,24 @@ func NewHandler(bs *service.BillingService, cfg *config.Config) *Handler {
 	}
 }
 
-func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) MakeHandler(fn HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := fn(w, r); err != nil {
+			// centralized error handling
+			h.HandleError(w, r, err)
+		}
+	}
+}
+
+func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) error {
 	loanIDStr := chi.URLParam(r, "loanID")
 	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid loan id", http.StatusBadRequest)
+		return BadRequest("Invalid loan id", err)
 	}
 	loan, err := h.billingService.GetLoanByID(r.Context(), loanID)
 	if err != nil {
-		switch err {
-		case service.ErrLoanNotFound:
-			http.Error(w, "Loan not found", http.StatusNotFound)
-		default:
-			log.Printf("Error find loan %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
-		}
-		return
+		return err
 	}
 
 	// intentionally put isDelinquent as part of the loan detail rather than as a separated rest API
@@ -51,9 +55,7 @@ func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) {
 	// - avoiding adding more latency
 	isDelinquent, err := h.billingService.IsDelinquent(r.Context(), loan.ID, time.Now())
 	if err != nil {
-		log.Printf("Failed to compute loan delinquency : %v", err)
-		http.Error(w, "Failed to compute loan delinquency", http.StatusInternalServerError)
-		return
+		return err
 	}
 
 	resp := detailLoanResponse{
@@ -67,8 +69,7 @@ func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resp)
-
+	return json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) {

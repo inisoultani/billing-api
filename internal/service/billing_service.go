@@ -5,6 +5,7 @@ import (
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -20,6 +21,7 @@ var (
 	ErrInvalidPayment          = errors.New("Invalid payment")
 	ErrLoanAlreadyClosed       = errors.New("Loan already fully paid")
 	ErrDuplicatePayment        = errors.New("Duplicate payment for current week")
+	ErrDelinquencyCheck        = errors.New("Failed to compute loan delinquency")
 )
 
 type BillingService struct {
@@ -251,7 +253,7 @@ func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now tim
 	// get loan last paid week
 	lastPaidWeek, err := s.repo.GetLastPaidWeek(ctx, loanID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("%w %v", ErrDelinquencyCheck, err)
 	}
 
 	// the loan start date is assumed to be the loan creation timestamp, as the problem statement does not describe a separate approval or disbursement phase.
