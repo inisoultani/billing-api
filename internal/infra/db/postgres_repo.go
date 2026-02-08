@@ -107,7 +107,9 @@ func (r *PostgresRepo) InsertPayment(ctx context.Context, arg sqlc.InsertPayment
 
 // ListPaymentsByLoanID handles paginated retrieval of payments
 func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPaymentsByLoanIDParams) ([]sqlc.ListPaymentsByLoanIDRow, error) {
-	return r.queries.ListPaymentsByLoanID(ctx, arg)
+	return runWithTimeout(ctx, "List payments based on loanID", 1, func(ctx context.Context) ([]sqlc.ListPaymentsByLoanIDRow, error) {
+		return r.queries.ListPaymentsByLoanID(ctx, arg)
+	})
 }
 
 // SCHEDULE RELATED
