@@ -104,21 +104,16 @@ func (h *Handler) SubmitLoan(w http.ResponseWriter, r *http.Request) error {
 	return json.NewEncoder(w).Encode(resp)
 }
 
-func (h *Handler) GetOutstanding(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetOutstanding(w http.ResponseWriter, r *http.Request) error {
 	loanIDStr := chi.URLParam(r, "loanID")
 	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid loan id", http.StatusBadRequest)
+		return BadRequest("Invalid loan ID", err)
 	}
 
 	outstanding, err := h.billingService.GetOutstanding(r.Context(), loanID)
 	if err != nil {
-		if err == service.ErrLoanNotFound {
-			http.Error(w, "Loan not found", http.StatusNotFound)
-			return
-		}
-		log.Printf("Error get outstanding %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return err
 	}
 
 	resp := outstandingResponse{
@@ -128,7 +123,7 @@ func (h *Handler) GetOutstanding(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(resp)
+	return json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) error {
