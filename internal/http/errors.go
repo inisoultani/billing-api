@@ -38,6 +38,7 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 	var appError *AppError
 	if errors.As(err, &appError) {
 		http.Error(w, appError.Message, appError.Code)
+		return
 	}
 
 	// Check if the error string contains our custom repo prefix

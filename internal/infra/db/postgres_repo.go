@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -115,6 +116,11 @@ func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []sqlc.Creat
 	// specifically set timeout for this particular process
 	// for insert loan in self there will dedicate timout
 	return runWithTimeout(ctx, r, "Batch insert schedule", len(arg), func(timeoutCtx context.Context) (int64, error) {
+		// uncomment bellow code to simulate context time out and examining the error handler
+		// _, err := simulateContextTimeout[int64](timeoutCtx)
+		// if err != nil {
+		// 	return 0, err
+		// }
 		return r.queries.CreateLoanSchedules(ctx, arg)
 	})
 }
@@ -134,4 +140,16 @@ func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg sqlc.Updat
 // GetScheduleBySequence retrieve schedule based on sequence
 func (r *PostgresRepo) GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error) {
 	return r.queries.GetScheduleBySequence(ctx, arg)
+}
+
+// timeout simulator
+func simulateContextTimeout[T any](timeoutCtx context.Context) (T, error) {
+	var zero T
+	select {
+	case <-time.After(20 * time.Second):
+		log.Println("finished sleep timer")
+	case <-timeoutCtx.Done():
+		return zero, timeoutCtx.Err()
+	}
+	return zero, nil
 }

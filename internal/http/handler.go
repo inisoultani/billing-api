@@ -134,27 +134,24 @@ func (h *Handler) GetOutstanding(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resp)
 }
 
-func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) error {
 	loanIDStr := chi.URLParam(r, "loanID")
 	loanID, err := strconv.ParseInt(loanIDStr, 10, 64)
 
 	if err != nil {
-		http.Error(w, "Invalid loan id", http.StatusBadRequest)
-		return
+		return BadRequest("Invalid loan ID", err)
 	}
 
 	var req submitPaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
+		// http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return BadRequest("Invalid body request", err)
 	}
 
 	// extract idempotency key
 	idempotencyKey := GetIdempotencyKey(r.Context())
 	if idempotencyKey == "" {
-		log.Printf("Request failed due to not providing X-Idempotency-Key")
-		http.Error(w, "X-Idempotency-Key header is required", http.StatusBadRequest)
-		return
+		return BadRequest("Request failed due to not providing X-Idempotency-Key", err)
 	}
 
 	// sample on implementing hybrid timeout management
@@ -170,8 +167,7 @@ func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		h.HandleError(w, r, err)
-		return
+		return err
 	}
 
 	resp := submitPaymentResponse{
@@ -180,7 +176,7 @@ func (h *Handler) MakePayment(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(resp)
+	return json.NewEncoder(w).Encode(resp)
 }
 
 func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) {

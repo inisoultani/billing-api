@@ -36,7 +36,7 @@ func NewRouter(billingService *service.BillingService, cfg *config.Config) http.
 
 		r.Group(func(r chi.Router) {
 			r.Use(billingApiMiddleware.IdempotencyMiddleware)
-			r.Post("/{loanID}/payment", h.MakePayment)
+			r.Post("/{loanID}/payment", h.MakeHandler(h.MakePayment))
 		})
 	})
 
