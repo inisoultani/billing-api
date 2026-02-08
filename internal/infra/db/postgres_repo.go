@@ -43,7 +43,7 @@ func getContextWithTimeout(ctx context.Context, label string, rowCount int) (con
 	return context.WithTimeoutCause(ctx, timeout, cause)
 }
 
-func runWithTimeout[T any](ctx context.Context, r *PostgresRepo, label string, rowCount int, fn func(context.Context) (T, error)) (T, error) {
+func runWithTimeout[T any](ctx context.Context, label string, rowCount int, fn func(context.Context) (T, error)) (T, error) {
 	childCtx, cancel := getContextWithTimeout(ctx, label, rowCount)
 	defer cancel()
 
@@ -79,7 +79,7 @@ func (r *PostgresRepo) GetLoanByID(ctx context.Context, id int64) (sqlc.Loan, er
 // InsertLoan creates a new loan record
 func (r *PostgresRepo) InsertLoan(ctx context.Context, arg sqlc.InsertLoanParams) (sqlc.Loan, error) {
 	// set proper timeout for this process
-	return runWithTimeout(ctx, r, "Insert Loan", 1, func(timeoutCtx context.Context) (sqlc.Loan, error) {
+	return runWithTimeout(ctx, "Insert Loan", 1, func(ctx context.Context) (sqlc.Loan, error) {
 		return r.queries.InsertLoan(ctx, arg)
 	})
 }
@@ -115,9 +115,9 @@ func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPa
 func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []sqlc.CreateLoanSchedulesParams) (int64, error) {
 	// specifically set timeout for this particular process
 	// for insert loan in self there will dedicate timout
-	return runWithTimeout(ctx, r, "Batch insert schedule", len(arg), func(timeoutCtx context.Context) (int64, error) {
+	return runWithTimeout(ctx, "Batch insert schedule", len(arg), func(ctx context.Context) (int64, error) {
 		// uncomment bellow code to simulate context time out and examining the error handler
-		// _, err := simulateContextTimeout[int64](timeoutCtx)
+		// _, err := simulateContextTimeout[int64](ctx)
 		// if err != nil {
 		// 	return 0, err
 		// }
@@ -127,12 +127,14 @@ func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []sqlc.Creat
 
 // ListSchedulesByLoanID handle paginated retrieval of schedules
 func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListSchedulesByLoanIDWithCursorParams) ([]sqlc.Schedule, error) {
-	return r.queries.ListSchedulesByLoanIDWithCursor(ctx, arg)
+	return runWithTimeout(ctx, "List schedule based on loan ID", 10, func(ctx context.Context) ([]sqlc.Schedule, error) {
+		return r.queries.ListSchedulesByLoanIDWithCursor(ctx, arg)
+	})
 }
 
 // UpdateSchedulePayment update related schedule based payment sequence
 func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error) {
-	return runWithTimeout(ctx, r, "Update schedule payment", 1, func(timeoutCtx context.Context) (sqlc.Schedule, error) {
+	return runWithTimeout(ctx, "Update schedule payment", 1, func(ctx context.Context) (sqlc.Schedule, error) {
 		return r.queries.UpdateSchedulePayment(ctx, arg)
 	})
 }
@@ -143,13 +145,13 @@ func (r *PostgresRepo) GetScheduleBySequence(ctx context.Context, arg sqlc.GetSc
 }
 
 // timeout simulator
-func simulateContextTimeout[T any](timeoutCtx context.Context) (T, error) {
+func simulateContextTimeout[T any](ctx context.Context) (T, error) {
 	var zero T
 	select {
 	case <-time.After(20 * time.Second):
 		log.Println("finished sleep timer")
-	case <-timeoutCtx.Done():
-		return zero, timeoutCtx.Err()
+	case <-ctx.Done():
+		return zero, ctx.Err()
 	}
 	return zero, nil
 }
