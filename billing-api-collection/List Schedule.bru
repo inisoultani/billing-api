@@ -1,0 +1,25 @@
+meta {
+  name: List Schedule
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{protocol}}://{{host}}:{{port}}/loan/:loanID/schedule?limit=3&cursor=eyJzZXEiOjN9
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 3
+  cursor: eyJzZXEiOjN9
+}
+
+params:path {
+  loanID: 24
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

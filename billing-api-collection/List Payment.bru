@@ -1,0 +1,25 @@
+meta {
+  name: List Payment
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{protocol}}://{{host}}:{{port}}/loan/:loanID/payment?limit=3
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 3
+  ~cursor: eyJQYWlkQXQiOiIyMDI2LTAyLTA4VDExOjQ5OjE1LjMwNzYxM1oiLCJJRCI6NTB9
+}
+
+params:path {
+  loanID: 24
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

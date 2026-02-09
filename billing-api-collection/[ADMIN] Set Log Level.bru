@@ -1,0 +1,30 @@
+meta {
+  name: [ADMIN] Set Log Level
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{protocol}}://{{host}}:{{port}}/loan/admin/log-level?level=debug
+  body: json
+  auth: inherit
+}
+
+params:query {
+  level: debug
+}
+
+headers {
+  X-Idempotency-Key: 62fcd7b5d-9223-4d8f-bf31-174cd25328ec1a
+}
+
+body:json {
+  {
+    "amount": 1100000
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

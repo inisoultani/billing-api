@@ -1,0 +1,31 @@
+{
+  "name": "local",
+  "variables": [
+    {
+      "name": "host",
+      "value": "localhost",
+      "type": "text",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "port",
+      "value": "8081",
+      "type": "text",
+      "enabled": true,
+      "secret": false
+    },
+    {
+      "name": "protocol",
+      "value": "http",
+      "type": "text",
+      "enabled": true,
+      "secret": false
+    }
+  ],
+  "info": {
+    "type": "bruno-environment",
+    "exportedAt": "2026-02-09T10:19:31.729Z",
+    "exportedUsing": "Bruno/v3.0.2"
+  }
+}

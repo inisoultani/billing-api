@@ -1,0 +1,30 @@
+meta {
+  name: Submit Payment
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{protocol}}://{{host}}:{{port}}/loan/:loan_id/payment
+  body: json
+  auth: inherit
+}
+
+params:path {
+  loan_id: 27
+}
+
+headers {
+  X-Idempotency-Key: 62fcd7b5d-9223-4d8f-bf31-174cd25328ec1a
+}
+
+body:json {
+  {
+    "amount": 1100000
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
