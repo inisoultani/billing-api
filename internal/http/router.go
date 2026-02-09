@@ -5,6 +5,7 @@ import (
 	"billing-api/internal/service"
 	"net/http"
 
+	billingApiHandler "billing-api/internal/http/handler"
 	billingApiMiddleware "billing-api/internal/http/middleware"
 
 	"github.com/go-chi/chi/v5"
@@ -27,7 +28,7 @@ func NewRouter(billingService *service.BillingService, cfg *config.Config) http.
 	})
 
 	r.Route("/loan", func(r chi.Router) {
-		h := NewHandler(billingService, cfg)
+		h := billingApiHandler.NewHandler(billingService, cfg)
 
 		r.Post("/", h.MakeHandler(h.SubmitLoan))
 		r.Get("/{loanID}", h.MakeHandler(h.GetLoanByID))

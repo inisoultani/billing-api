@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"billing-api/internal/service"

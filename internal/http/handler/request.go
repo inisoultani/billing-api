@@ -1,18 +1,18 @@
-package http
+package handler
 
 import (
 	"encoding/base64"
 	"encoding/json"
 )
 
-type submitLoanRequest struct {
+type SubmitLoanRequest struct {
 	PrincipalAmount    int64   `json:"principal_amount"`
 	AnnualInterestRate float64 `json:"annual_interest_rate"`
 	TotalWeeks         int     `json:"total_weeks"`
 	StartDate          string  `json:"start_date"` // YYYY-MM-DD
 }
 
-type submitPaymentRequest struct {
+type SubmitPaymentRequest struct {
 	Amount int64 `json:"amount"`
 }
 

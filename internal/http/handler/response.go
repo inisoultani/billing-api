@@ -1,4 +1,4 @@
-package http
+package handler
 
 import (
 	"billing-api/internal/domain"
@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
-type submitLoanResponse struct {
+type SubmitLoanResponse struct {
 	LoanID              int64 `json:"loan_id"`
 	WeeklyPaymentAmount int64 `json:"weekly_payment_amount"`
 	TotalPayable        int64 `json:"total_payable"`
 }
 
-type detailLoanResponse struct {
+type DetailLoanResponse struct {
 	LoanID              int64  `json:"loan_id"`
 	TotalPayable        int64  `json:"total_payable"`
 	WeeklyPaymentAmount int64  `json:"weekly_payment_amount"`
@@ -23,12 +23,12 @@ type detailLoanResponse struct {
 	IsDelinquent        bool   `json:"is_delinquent"`
 }
 
-type outstandingResponse struct {
+type OutstandingResponse struct {
 	LoanID      int64 `json:"loan_id"`
 	Outstanding int64 `json:"outstanding"`
 }
 
-type submitPaymentResponse struct {
+type SubmitPaymentResponse struct {
 	PaymentID int64 `json:"payment_id"`
 }
 
