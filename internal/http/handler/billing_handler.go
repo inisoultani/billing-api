@@ -12,14 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (h *Handler) MakeHandler(fn HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := fn(w, r); err != nil {
-			// centralized error handling
-			h.HandleError(w, r, err)
-		}
-	}
-}
+
 
 func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) error {
 	loanIDStr := chi.URLParam(r, "loanID")

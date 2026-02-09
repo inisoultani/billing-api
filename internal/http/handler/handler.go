@@ -36,6 +36,15 @@ func NewHandler(bs *service.BillingService, cfg *config.Config) *Handler {
 	}
 }
 
+func (h *Handler) MakeHandler(fn HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := fn(w, r); err != nil {
+			// centralized error handling
+			h.HandleError(w, r, err)
+		}
+	}
+}
+
 // GetIdempotencyKey safely retrieves the key from context
 func GetIdempotencyKey(ctx context.Context) string {
 	val, ok := ctx.Value(contextkey.IdempotencyKey).(string)
