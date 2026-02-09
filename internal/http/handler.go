@@ -2,8 +2,8 @@ package http
 
 import (
 	"billing-api/internal/config"
+	billingApiContextKey "billing-api/internal/contextkey"
 	"billing-api/internal/domain"
-	"billing-api/internal/http/middleware"
 	"billing-api/internal/service"
 	"context"
 	"encoding/json"
@@ -249,7 +249,7 @@ func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) error {
 
 // GetIdempotencyKey safely retrieves the key from context
 func GetIdempotencyKey(ctx context.Context) string {
-	val, ok := ctx.Value(middleware.IdempotencyKey).(string)
+	val, ok := ctx.Value(billingApiContextKey.IdempotencyKey).(string)
 	if !ok {
 		return ""
 	}

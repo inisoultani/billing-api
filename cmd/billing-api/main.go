@@ -4,9 +4,12 @@ import (
 	"billing-api/internal/config"
 	billingApiHttp "billing-api/internal/http"
 	"billing-api/internal/infra/db"
+	"billing-api/internal/logger"
 	"billing-api/internal/service"
 	"context"
+	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,12 +24,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("Try to establsing db connection...")
+	appLogger, logLevel := logger.NewLogger(cfg.AppEnv == "production")
+	cfg.LogLevel = logLevel
+
+	appLogger.Info("starting server", slog.String("env", cfg.AppEnv))
+	appLogger.Info("Try to establsing db connection...")
 	pool, err := db.NewPostgresPool(cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to db : %v", err)
+		appLogger.Error("Failed to connect to db", slog.Any("err", err))
+		os.Exit(1)
 	} else {
-		log.Printf("Successfuly establsing db connection...")
+		appLogger.Info("Successfuly establsing db connection...")
 	}
 
 	defer pool.Close()
@@ -43,9 +51,10 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("billing-api listening on %s\n", addr)
+		appLogger.Info(fmt.Sprintf("billing-api listening on %s", addr))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen error: %v", err)
+			appLogger.Error("List error", slog.Any("err", err))
+			os.Exit(1)
 		}
 	}()
 
@@ -54,15 +63,16 @@ func main() {
 
 	<-stop
 
-	log.Println("closing all db connections...")
+	appLogger.Info("closing all db connections...")
 	pool.Close()
 
-	log.Println("shutting down billing-api server...")
+	appLogger.Info("shutting down billing-api server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("server shutdown failed: %v", err)
+		appLogger.Error("List error", slog.Any("err", err))
+		os.Exit(1)
 	}
-	log.Println("server gracefully stopped")
+	appLogger.Info("server gracefully stopped")
 }

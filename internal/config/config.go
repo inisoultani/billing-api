@@ -2,8 +2,10 @@ package config
 
 import (
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -18,6 +20,8 @@ type Config struct {
 	MaxConnIdleTime    int
 	MaxConnLifeTime    int
 	HealthCheckPeriod  int
+	AppEnv             string
+	LogLevel           *slog.LevelVar
 }
 
 func Load() (*Config, error) {
@@ -40,6 +44,7 @@ func Load() (*Config, error) {
 		MaxConnIdleTime:    getEnvInt("DB_MAX_IDLE_TIME", 300),
 		MaxConnLifeTime:    getEnvInt("DB_MAX_LIFE_TIME", 1800),
 		HealthCheckPeriod:  getEnvInt("DB_HEALTH_CHECK_PERIOD", 60),
+		AppEnv:             strings.ToLower(getEnv("APP_ENV", "development")),
 	}, nil
 }
 

@@ -15,10 +15,11 @@ func NewRouter(billingService *service.BillingService, cfg *config.Config) http.
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	// r.Use(billingApiMiddleware.RequestIDMiddleware)
+	r.Use(middleware.RequestID)
+	r.Use(billingApiMiddleware.LoggerMiddleware)
+	r.Use(middleware.RealIP)
 
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
