@@ -1,10 +1,24 @@
 package logger
 
 import (
-	bilingaApiHandler "billing-api/internal/http/handler"
+	"billing-api/internal/contextkey"
+	"context"
 	"log/slog"
 	"os"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
+
+type LogContextHandler struct {
+	slog.Handler
+}
+
+func (l *LogContextHandler) Handle(ctx context.Context, r slog.Record) error {
+	if reqID := middleware.GetReqID(ctx); reqID != "" {
+		r.AddAttrs(slog.String(string(contextkey.RequestIDKey), reqID))
+	}
+	return l.Handler.Handle(ctx, r)
+}
 
 func NewLogger(isProduction bool) (*slog.Logger, *slog.LevelVar) {
 	logLevel := &slog.LevelVar{}
@@ -21,7 +35,7 @@ func NewLogger(isProduction bool) (*slog.Logger, *slog.LevelVar) {
 		logLevel.Set(slog.LevelDebug)
 	}
 
-	wrapperHandler := &bilingaApiHandler.LogContextHandler{
+	wrapperHandler := &LogContextHandler{
 		Handler: handler,
 	}
 

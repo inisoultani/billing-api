@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -22,12 +23,15 @@ func (h *Handler) ChangeLogLevel(level *slog.LevelVar) HandlerFunc {
 		case "ERROR":
 			level.Set(slog.LevelError)
 		default:
-			http.Error(w, "Invalid level", http.StatusBadRequest)
-			return errors.New("")
+			return BadRequest(fmt.Sprintf("Invalid level : %s", newLevel), errors.New("Invalid level"))
 		}
 
 		slog.Debug("Log level changed", slog.String("new_level", strings.ToUpper(newLevel)))
 		slog.Info("Log level changed", slog.String("new_level", strings.ToUpper(newLevel)))
-		return json.NewEncoder(w).Encode(nil)
+
+		return json.NewEncoder(w).Encode(map[string]string{
+			"status":  "success",
+			"message": fmt.Sprintf("Log level changed to %s", level),
+		})
 	}
 }
