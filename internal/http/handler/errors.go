@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -46,6 +46,7 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 	// handle predefined AppError type
 	var appError *AppError
 	if errors.As(err, &appError) {
+		logError(r, "app_error", err)
 		http.Error(w, appError.Message, appError.Code)
 		return
 	}
@@ -53,7 +54,7 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 	// Check if the error string contains our custom repo prefix
 	// Or check if it's a context error
 	if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "repo-timeout") {
-		log.Printf("[TIMEOUT] %s %s: %v", r.Method, r.URL.Path, err)
+		logError(r, "request_timeout", err)
 		http.Error(w, "Database timeout", http.StatusGatewayTimeout)
 		return
 	}
@@ -61,12 +62,16 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 	// handle other errors
 	switch {
 	case errors.Is(err, service.ErrLoanNotFound):
+		logError(r, "loan_not_found", err)
 		http.Error(w, "Loan not found", http.StatusNotFound)
 	case errors.Is(err, service.ErrInvalidPayment):
+		logError(r, "invalid_payment_amount", err)
 		http.Error(w, "Invalid payment amount", http.StatusBadRequest)
 	case errors.Is(err, service.ErrLoanAlreadyClosed):
+		logError(r, "loan_already_closed", err)
 		http.Error(w, "Loan already closed", http.StatusConflict)
 	case errors.Is(err, service.ErrDuplicatePayment):
+		logError(r, "payment_already_processed", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -74,10 +79,18 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 			"message": "payment already processed",
 		})
 	case errors.Is(err, service.ErrDelinquencyCheck):
-		log.Printf("[LOGIC ERROR] %v", err)
+		logError(r, "logic_error", err)
 		http.Error(w, "Failed to compute loan deliquency", http.StatusInternalServerError)
 	default:
-		log.Printf("[SERVER ERROR] %s %s - %v", r.Method, r.URL.Path, err)
+		logError(r, "internal_server_error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 	}
+}
+
+func logError(r *http.Request, msg string, err error) {
+	slog.ErrorContext(r.Context(), msg,
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+		slog.Any("err", err),
+	)
 }

@@ -371,7 +371,5 @@ The system implements sampling **Smart Context Timeouts** to protect the databas
 
 ```bash
 # pinpointing exactly which query exceeded its allocated limit
-[TIMEOUT] POST /payments: repo_timeout: CreatePayment (limit 2s)
-[TIMEOUT] POST /loans: repo_timeout: BatchSchedules (limit 7.2s)
-
+time=2026-02-09T13:59:08.195+07:00 level=ERROR msg=request_timeout method=GET path=/loan/24/payment err="repo-timeout : List payments based on loanID limit was (2s)" request_id=Sultans-MacBook.local/B7fxWIw37a-000001
 ```

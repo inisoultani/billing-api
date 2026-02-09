@@ -7,7 +7,6 @@ import (
 	"billing-api/internal/logger"
 	"billing-api/internal/service"
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -51,7 +50,7 @@ func main() {
 	}
 
 	go func() {
-		appLogger.Info(fmt.Sprintf("billing-api listening on %s", addr))
+		appLogger.Info("billing-api started", slog.String("port", addr))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			appLogger.Error("List error", slog.Any("err", err))
 			os.Exit(1)
