@@ -2,6 +2,7 @@ package service
 
 import (
 	"billing-api/internal/domain"
+	"billing-api/internal/infra/db/repository"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
@@ -184,15 +185,12 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 			return ErrLoanAlreadyClosed
 		}
 
-		payment, err := repo.InsertPayment(ctx, sqlc.InsertPaymentParams{
+		payment, err := repo.InsertPayment(ctx, domain.CreatePaymentComand{
 			LoanID:         input.LoanID,
 			WeekNumber:     nextWeek,
 			Amount:         input.Amount,
 			IdempotencyKey: input.IdempotencyKey,
-			PaidAt: pgtype.Timestamp{
-				Time:  input.PaidAt,
-				Valid: true,
-			},
+			PaidAt:         input.PaidAt,
 		})
 		if err != nil {
 			if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
@@ -296,7 +294,7 @@ func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit i
 
 	payments := make([]*domain.Payment, 0, len(rows))
 	for _, r := range rows {
-		payments = append(payments, domain.MapPayment(r))
+		payments = append(payments, repository.MapListPaymentsByLoanIDRow(r))
 	}
 
 	var nextCursor *domain.PaymentCursor

@@ -56,9 +56,9 @@ func (m *MockBillingRepository) InsertLoan(ctx context.Context, arg domain.Creat
 }
 
 // InsertPayment mocks the creation of a payment record.
-func (m *MockBillingRepository) InsertPayment(ctx context.Context, arg sqlc.InsertPaymentParams) (sqlc.Payment, error) {
+func (m *MockBillingRepository) InsertPayment(ctx context.Context, arg domain.CreatePaymentComand) (*domain.Payment, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.Payment), args.Error(1)
+	return args.Get(0).(*domain.Payment), args.Error(1)
 }
 
 // ListPaymentsByLoanID mocks the paginated retrieval of payments.

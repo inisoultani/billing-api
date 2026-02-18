@@ -90,7 +90,7 @@ func (r *PostgresRepo) GetLoanByID(ctx context.Context, id int64) (*domain.Loan,
 func (r *PostgresRepo) InsertLoan(ctx context.Context, arg domain.CreateLoanCommand) (*domain.Loan, error) {
 	// set proper timeout for this process
 	return runWithTimeout(ctx, "InsertLoan", 1, func(ctx context.Context) (*domain.Loan, error) {
-		l, err := r.queries.InsertLoan(ctx, *MapCreateLoanCommand(arg))
+		l, err := r.queries.InsertLoan(ctx, *MapCreateLoanCommand(&arg))
 		if err != nil {
 			var zero *domain.Loan
 			return zero, err
@@ -116,8 +116,15 @@ func (r *PostgresRepo) GetLastPaidWeek(ctx context.Context, loanID int64) (int32
 }
 
 // InsertPayment records a new payment for a specific week
-func (r *PostgresRepo) InsertPayment(ctx context.Context, arg sqlc.InsertPaymentParams) (sqlc.Payment, error) {
-	return r.queries.InsertPayment(ctx, arg)
+func (r *PostgresRepo) InsertPayment(ctx context.Context, arg domain.CreatePaymentComand) (*domain.Payment, error) {
+	return runWithTimeout(ctx, "InsertPayment", 1, func(ctx context.Context) (*domain.Payment, error) {
+		p, err := r.queries.InsertPayment(ctx, *MapCreatePaymentComand(&arg))
+		if err != nil {
+			var zero *domain.Payment
+			return zero, err
+		}
+		return MapPayment(p), nil
+	})
 }
 
 // ListPaymentsByLoanID handles paginated retrieval of payments

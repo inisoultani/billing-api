@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -28,12 +27,9 @@ func TestIsDelinquent_Mock(t *testing.T) {
 		// mock GetLoanByID
 		// setup loan 4 weeks ago
 		fourWeeksAgoDate := now.AddDate(0, 0, -28)
-		mockRepo.On("GetLoanByID", ctx, loanID).Return(sqlc.Loan{
-			ID: loanID,
-			CreatedAt: pgtype.Timestamp{
-				Time:  fourWeeksAgoDate,
-				Valid: true,
-			},
+		mockRepo.On("GetLoanByID", ctx, loanID).Return(&domain.Loan{
+			ID:        loanID,
+			CreatedAt: fourWeeksAgoDate,
 		}, nil).Once()
 
 		// mock GetLastPaidWeek, paid only 1 week
@@ -52,12 +48,9 @@ func TestIsDelinquent_Mock(t *testing.T) {
 		loanID := int64(2)
 		twoWeeksAgo := now.AddDate(0, 0, -14)
 
-		mockRepo.On("GetLoanByID", ctx, loanID).Return(sqlc.Loan{
-			ID: loanID,
-			CreatedAt: pgtype.Timestamp{
-				Time:  twoWeeksAgo,
-				Valid: true,
-			},
+		mockRepo.On("GetLoanByID", ctx, loanID).Return(&domain.Loan{
+			ID:        loanID,
+			CreatedAt: twoWeeksAgo,
 		}, nil).Once()
 
 		// expected week 2 - paid 2 = 0 not delinquent
@@ -83,7 +76,7 @@ func TestGetOutstanding_Unit(t *testing.T) {
 	loanID := int64(1)
 
 	// simulate a loan with 5,000,000 total and 1,000,000 already paid
-	mockRepo.On("GetLoanByID", ctx, loanID).Return(sqlc.Loan{
+	mockRepo.On("GetLoanByID", ctx, loanID).Return(&domain.Loan{
 		ID:                 loanID,
 		TotalPayableAmount: 5000000,
 	}, nil)
@@ -117,7 +110,7 @@ func TestSubmitPayment_Mock(t *testing.T) {
 			}).Return(nil)
 
 		// mock GetLoanByID (to check if loan exists and get weekly amount)
-		mockRepo.On("GetLoanByID", mock.Anything, input.LoanID).Return(sqlc.Loan{
+		mockRepo.On("GetLoanByID", mock.Anything, input.LoanID).Return(&domain.Loan{
 			ID:                  1,
 			WeeklyPaymentAmount: 110000,
 			TotalPayableAmount:  5500000,
@@ -147,16 +140,13 @@ func TestSubmitPayment_Mock(t *testing.T) {
 
 		mockRepo.On("GetTotalPaidAmount", mock.Anything, input.LoanID).Return(int64(0), nil).Once()
 
-		expectedInsert := sqlc.InsertPaymentParams{
+		expectedInsert := domain.CreatePaymentComand{
 			LoanID:     input.LoanID,
 			WeekNumber: 1,
 			Amount:     input.Amount,
-			PaidAt: pgtype.Timestamp{
-				Time:  input.PaidAt,
-				Valid: true,
-			},
+			PaidAt:     input.PaidAt,
 		}
-		mockRepo.On("InsertPayment", mock.Anything, expectedInsert).Return(sqlc.Payment{
+		mockRepo.On("InsertPayment", mock.Anything, expectedInsert).Return(&domain.Payment{
 			ID: 999,
 		}, nil).Once()
 
@@ -183,7 +173,7 @@ func TestSubmitPayment_Mock(t *testing.T) {
 
 		mockRepo.On("GetTotalPaidAmount", mock.Anything, input.LoanID).Return(int64(0), nil).Once()
 
-		mockRepo.On("GetLoanByID", mock.Anything, input.LoanID).Return(sqlc.Loan{
+		mockRepo.On("GetLoanByID", mock.Anything, input.LoanID).Return(&domain.Loan{
 			ID:                  1,
 			WeeklyPaymentAmount: 110000, // The required amount
 		}, nil).Once()

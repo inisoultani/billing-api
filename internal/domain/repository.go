@@ -18,7 +18,7 @@ type BillingRepository interface {
 	GetTotalPaidAmount(ctx context.Context, loanID int64) (int64, error)
 	GetPaidWeeksCount(ctx context.Context, loanID int64) (int32, error)
 	GetLastPaidWeek(ctx context.Context, loanID int64) (int32, error)
-	InsertPayment(ctx context.Context, arg sqlc.InsertPaymentParams) (sqlc.Payment, error)
+	InsertPayment(ctx context.Context, arg CreatePaymentComand) (*Payment, error)
 	ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPaymentsByLoanIDParams) ([]sqlc.ListPaymentsByLoanIDRow, error)
 
 	// Schedule-related actions
