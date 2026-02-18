@@ -73,18 +73,27 @@ func (r *PostgresRepo) WithTx(ctx context.Context, fn func(repo domain.BillingRe
 
 // LOAN RELATED
 // GetLoanByID retrieves a loan by its primary key
-func (r *PostgresRepo) GetLoanByID(ctx context.Context, id int64) (sqlc.Loan, error) {
-	return r.queries.GetLoanByID(ctx, id)
+func (r *PostgresRepo) GetLoanByID(ctx context.Context, id int64) (*domain.Loan, error) {
+
+	return runWithTimeout(ctx, "GetLoanByID", 1, func(ctx context.Context) (*domain.Loan, error) {
+		l, err := r.queries.GetLoanByID(ctx, id)
+		if err != nil {
+			var zero *domain.Loan
+			return zero, err
+		}
+		return MapLoan(l), nil
+	})
+
 }
 
 // InsertLoan creates a new loan record
 func (r *PostgresRepo) InsertLoan(ctx context.Context, arg domain.CreateLoanCommand) (*domain.Loan, error) {
 	// set proper timeout for this process
-	return runWithTimeout(ctx, "Insert Loan", 1, func(ctx context.Context) (*domain.Loan, error) {
-		var zero domain.Loan
+	return runWithTimeout(ctx, "InsertLoan", 1, func(ctx context.Context) (*domain.Loan, error) {
 		l, err := r.queries.InsertLoan(ctx, *MapCreateLoanCommand(arg))
 		if err != nil {
-			return &zero, err
+			var zero *domain.Loan
+			return zero, err
 		}
 		return MapLoan(l), err
 	})

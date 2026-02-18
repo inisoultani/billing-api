@@ -2,7 +2,6 @@ package service
 
 import (
 	"billing-api/internal/domain"
-	"billing-api/internal/infra/db/repository"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
@@ -49,7 +48,7 @@ func (s *BillingService) GetLoanByID(ctx context.Context, loanID int64) (*domain
 		return nil, ErrLoanNotFound
 	}
 
-	return repository.MapLoan(loan), nil
+	return loan, nil
 }
 
 /*
@@ -181,7 +180,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 			return err
 		}
 		nextWeek := paidWeeks + 1
-		if nextWeek > loan.TotalWeeks {
+		if nextWeek > int32(loan.TotalWeeks) {
 			return ErrLoanAlreadyClosed
 		}
 
@@ -255,7 +254,7 @@ func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now tim
 
 	// the loan start date is assumed to be the loan creation timestamp, as the problem statement does not describe a separate approval or disbursement phase.
 	// if later such usecases are introduced in the future, we could use start_date field and used it later in the future for delinquency and repayment scheduling logic.
-	expectedWeek := weekSince(loan.CreatedAt.Time, now)
+	expectedWeek := weekSince(loan.CreatedAt, now)
 
 	// loan either just started or not yet
 	if expectedWeek <= 1 {

@@ -26,9 +26,9 @@ func (m *MockBillingRepository) WithTx(ctx context.Context, fn func(repo domain.
 }
 
 // GetLoanByID mocks the retrieval of a single loan.
-func (m *MockBillingRepository) GetLoanByID(ctx context.Context, id int64) (sqlc.Loan, error) {
+func (m *MockBillingRepository) GetLoanByID(ctx context.Context, id int64) (*domain.Loan, error) {
 	args := m.Called(ctx, id)
-	return args.Get(0).(sqlc.Loan), args.Error(1)
+	return args.Get(0).(*domain.Loan), args.Error(1)
 }
 
 // GetTotalPaidAmount mocks the calculation of total amount paid for a loan.
