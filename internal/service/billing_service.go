@@ -2,6 +2,7 @@ package service
 
 import (
 	"billing-api/internal/domain"
+	"billing-api/internal/infra/db/repository"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
@@ -48,7 +49,7 @@ func (s *BillingService) GetLoanByID(ctx context.Context, loanID int64) (*domain
 		return nil, ErrLoanNotFound
 	}
 
-	return domain.MapLoan(loan), nil
+	return repository.MapLoan(loan), nil
 }
 
 /*
@@ -79,16 +80,13 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 
 		weeklyPayment := totalPayable / int64(input.TotalWeeks)
 
-		loan, err := repo.InsertLoan(ctx, sqlc.InsertLoanParams{
+		loan, err := repo.InsertLoan(ctx, domain.CreateLoanCommand{
 			PrincipalAmount:     input.PrincipalAmount,
 			TotalInterestAmount: totalInterest,
 			TotalPayableAmount:  totalPayable,
 			WeeklyPaymentAmount: weeklyPayment,
 			TotalWeeks:          int32(input.TotalWeeks),
-			StartDate: pgtype.Date{
-				Time:  input.StartDate,
-				Valid: true,
-			},
+			StartDate:           input.StartDate,
 		})
 		if err != nil {
 			return err
@@ -114,8 +112,7 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 		if err != nil {
 			return err
 		}
-
-		domainLoan = domain.MapLoan(loan)
+		domainLoan = loan
 		return nil
 	})
 

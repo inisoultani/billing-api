@@ -50,9 +50,9 @@ func (m *MockBillingRepository) GetLastPaidWeek(ctx context.Context, loanID int6
 }
 
 // InsertLoan mocks the creation of a new loan.
-func (m *MockBillingRepository) InsertLoan(ctx context.Context, arg sqlc.InsertLoanParams) (sqlc.Loan, error) {
+func (m *MockBillingRepository) InsertLoan(ctx context.Context, arg domain.CreateLoanCommand) (*domain.Loan, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.Loan), args.Error(1)
+	return args.Get(0).(*domain.Loan), args.Error(1)
 }
 
 // InsertPayment mocks the creation of a payment record.

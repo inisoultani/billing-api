@@ -1,7 +1,8 @@
-package db
+package repository
 
 import (
 	"billing-api/internal/domain"
+	"billing-api/internal/infra/db"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
@@ -60,7 +61,7 @@ func runWithTimeout[T any](ctx context.Context, label string, rowCount int, fn f
 }
 
 func (r *PostgresRepo) WithTx(ctx context.Context, fn func(repo domain.BillingRepository) error) error {
-	return withTx(ctx, r.pool, func(tx pgx.Tx) error {
+	return db.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		// Create a new repository that uses the transaction instead of the pool
 		txRepo := &PostgresRepo{
 			queries: r.queries.WithTx(tx),
@@ -77,10 +78,15 @@ func (r *PostgresRepo) GetLoanByID(ctx context.Context, id int64) (sqlc.Loan, er
 }
 
 // InsertLoan creates a new loan record
-func (r *PostgresRepo) InsertLoan(ctx context.Context, arg sqlc.InsertLoanParams) (sqlc.Loan, error) {
+func (r *PostgresRepo) InsertLoan(ctx context.Context, arg domain.CreateLoanCommand) (*domain.Loan, error) {
 	// set proper timeout for this process
-	return runWithTimeout(ctx, "Insert Loan", 1, func(ctx context.Context) (sqlc.Loan, error) {
-		return r.queries.InsertLoan(ctx, arg)
+	return runWithTimeout(ctx, "Insert Loan", 1, func(ctx context.Context) (*domain.Loan, error) {
+		var zero domain.Loan
+		l, err := r.queries.InsertLoan(ctx, *MapCreateLoanCommand(arg))
+		if err != nil {
+			return &zero, err
+		}
+		return MapLoan(l), err
 	})
 }
 

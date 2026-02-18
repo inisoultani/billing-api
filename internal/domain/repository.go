@@ -12,7 +12,7 @@ type BillingRepository interface {
 
 	// Loan-related actions
 	GetLoanByID(ctx context.Context, id int64) (sqlc.Loan, error)
-	InsertLoan(ctx context.Context, arg sqlc.InsertLoanParams) (sqlc.Loan, error)
+	InsertLoan(ctx context.Context, arg CreateLoanCommand) (*Loan, error)
 
 	// Payment-related actions
 	GetTotalPaidAmount(ctx context.Context, loanID int64) (int64, error)

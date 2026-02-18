@@ -4,6 +4,7 @@ import (
 	"billing-api/internal/config"
 	billingApiHttp "billing-api/internal/http"
 	"billing-api/internal/infra/db"
+	"billing-api/internal/infra/db/repository"
 	"billing-api/internal/logger"
 	"billing-api/internal/service"
 	"context"
@@ -38,7 +39,7 @@ func main() {
 
 	defer pool.Close()
 
-	billingService := service.NewBillingService(pool, db.NewPostgresRepo(pool))
+	billingService := service.NewBillingService(pool, repository.NewPostgresRepo(pool))
 
 	addr := ":" + cfg.ServerPort
 

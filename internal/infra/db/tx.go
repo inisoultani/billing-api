@@ -10,7 +10,7 @@ import (
 /*
 withTx reusable wrapper function to support atomic transactional
 */
-func withTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) error {
+func WithTx(ctx context.Context, pool *pgxpool.Pool, fn func(tx pgx.Tx) error) error {
 
 	tx, err := pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
