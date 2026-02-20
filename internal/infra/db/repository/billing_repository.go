@@ -206,15 +206,36 @@ func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg domain.Lis
 }
 
 // UpdateSchedulePayment update related schedule based payment sequence
-func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error) {
-	return runWithTimeout(ctx, "Update schedule payment", 1, func(ctx context.Context) (sqlc.Schedule, error) {
-		return r.queries.UpdateSchedulePayment(ctx, arg)
+func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg domain.UpdateLoanSchedulePaymentCommand) (domain.LoanSchedule, error) {
+	return runWithTimeout(ctx, "Update schedule payment", 1, func(ctx context.Context) (domain.LoanSchedule, error) {
+		schedule, err := r.queries.UpdateSchedulePayment(ctx, sqlc.UpdateSchedulePaymentParams{
+			ID:         arg.ID,
+			PaidAmount: arg.PaidAmount,
+		})
+		if err != nil {
+			var zero domain.LoanSchedule
+			return zero, err
+		}
+
+		return MapSchedule(schedule), nil
 	})
 }
 
 // GetScheduleBySequence retrieve schedule based on sequence
-func (r *PostgresRepo) GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error) {
-	return r.queries.GetScheduleBySequence(ctx, arg)
+func (r *PostgresRepo) GetScheduleBySequence(ctx context.Context, arg domain.GetLoanScheduleBySequenceQuery) (domain.LoanSchedule, error) {
+	return runWithTimeout(ctx, "GetScheduleBySequence", 1, func(ctx context.Context) (domain.LoanSchedule, error) {
+		schedule, err := r.queries.GetScheduleBySequence(ctx, sqlc.GetScheduleBySequenceParams{
+			LoanID:   arg.LoanID,
+			Sequence: arg.Sequence,
+		})
+		if err != nil {
+			var zero domain.LoanSchedule
+			return zero, err
+		}
+
+		return MapSchedule(schedule), nil
+	})
+
 }
 
 // timeout simulator

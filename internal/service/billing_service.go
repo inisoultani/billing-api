@@ -2,7 +2,6 @@ package service
 
 import (
 	"billing-api/internal/domain"
-	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
 	"fmt"
@@ -200,7 +199,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 
 		// Update the specific schedule record
 		// Use GetScheduleBySequence to find the ID instead of a manual loop
-		sch, err := repo.GetScheduleBySequence(ctx, sqlc.GetScheduleBySequenceParams{
+		sch, err := repo.GetScheduleBySequence(ctx, domain.GetLoanScheduleBySequenceQuery{
 			LoanID:   input.LoanID,
 			Sequence: int32(nextWeek),
 		})
@@ -208,7 +207,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 			return err
 		}
 		log.Printf("schedule id that going to be updated : %d\n", sch.ID)
-		_, err = repo.UpdateSchedulePayment(ctx, sqlc.UpdateSchedulePaymentParams{
+		_, err = repo.UpdateSchedulePayment(ctx, domain.UpdateLoanSchedulePaymentCommand{
 			ID:         sch.ID,
 			PaidAmount: input.Amount,
 		})

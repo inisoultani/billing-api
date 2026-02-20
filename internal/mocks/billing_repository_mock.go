@@ -2,7 +2,6 @@ package mocks
 
 import (
 	"billing-api/internal/domain"
-	"billing-api/internal/infra/db/sqlc"
 	"context"
 
 	"github.com/stretchr/testify/mock"
@@ -88,13 +87,13 @@ func (m *MockBillingRepository) ListSchedulesByLoanID(ctx context.Context, arg d
 }
 
 // UpdateSchedulePayment mocks the schedule based on payment sequence
-func (m *MockBillingRepository) UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error) {
+func (m *MockBillingRepository) UpdateSchedulePayment(ctx context.Context, arg domain.UpdateLoanSchedulePaymentCommand) (domain.LoanSchedule, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.Schedule), args.Error(1)
+	return args.Get(0).(domain.LoanSchedule), args.Error(1)
 }
 
 // GetScheduleBySequence mocks the retrieval schedule based on sequence
-func (m *MockBillingRepository) GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error) {
+func (m *MockBillingRepository) GetScheduleBySequence(ctx context.Context, arg domain.GetLoanScheduleBySequenceQuery) (domain.LoanSchedule, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.Schedule), args.Error(1)
+	return args.Get(0).(domain.LoanSchedule), args.Error(1)
 }

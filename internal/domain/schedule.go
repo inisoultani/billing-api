@@ -26,3 +26,13 @@ type CreateLoanScheduleCommand struct {
 	LoanID    int64
 	Amount    int64
 }
+
+type UpdateLoanSchedulePaymentCommand struct {
+	ID         int64
+	PaidAmount int64
+}
+
+type GetLoanScheduleBySequenceQuery struct {
+	LoanID   int64
+	Sequence int32
+}

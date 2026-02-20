@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"billing-api/internal/infra/db/sqlc"
 	"context"
 )
 
@@ -24,6 +23,6 @@ type BillingRepository interface {
 	// Schedule-related actions
 	CreateLoanSchedules(ctx context.Context, arg []LoanSchedule) (int64, error)
 	ListSchedulesByLoanID(ctx context.Context, arg ListScheduleQuery) ([]LoanSchedule, error)
-	UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error)
-	GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error)
+	UpdateSchedulePayment(ctx context.Context, arg UpdateLoanSchedulePaymentCommand) (LoanSchedule, error)
+	GetScheduleBySequence(ctx context.Context, arg GetLoanScheduleBySequenceQuery) (LoanSchedule, error)
 }

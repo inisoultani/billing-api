@@ -2,7 +2,6 @@ package service
 
 import (
 	"billing-api/internal/domain"
-	"billing-api/internal/infra/db/sqlc"
 	"billing-api/internal/mocks"
 	"context"
 	"testing"
@@ -120,10 +119,10 @@ func TestSubmitPayment_Mock(t *testing.T) {
 		mockScheduleID := int64(12)
 
 		// This finds the schedule record for Week 1
-		mockRepo.On("GetScheduleBySequence", mock.Anything, sqlc.GetScheduleBySequenceParams{
+		mockRepo.On("GetScheduleBySequence", mock.Anything, domain.GetLoanScheduleBySequenceQuery{
 			LoanID:   input.LoanID,
 			Sequence: 1,
-		}).Return(sqlc.Schedule{
+		}).Return(domain.LoanSchedule{
 			ID:       mockScheduleID, // Arbitrary ID for the schedule record
 			LoanID:   1,
 			Sequence: 1,
@@ -131,10 +130,10 @@ func TestSubmitPayment_Mock(t *testing.T) {
 		}, nil).Once()
 
 		// This updates the schedule record with the payment amount
-		mockRepo.On("UpdateSchedulePayment", mock.Anything, sqlc.UpdateSchedulePaymentParams{
+		mockRepo.On("UpdateSchedulePayment", mock.Anything, domain.UpdateLoanSchedulePaymentCommand{
 			ID:         mockScheduleID, // Matches the ID returned by GetScheduleBySequence
 			PaidAmount: input.Amount,
-		}).Return(sqlc.Schedule{}, nil).Once()
+		}).Return(domain.LoanSchedule{}, nil).Once()
 
 		mockRepo.On("GetPaidWeeksCount", mock.Anything, input.LoanID).Return(int32(0), nil).Once()
 
