@@ -5,12 +5,14 @@ import (
 	"billing-api/internal/infra/db"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -122,6 +124,10 @@ func (r *PostgresRepo) InsertPayment(ctx context.Context, arg domain.CreatePayme
 		p, err := r.queries.InsertPayment(ctx, *MapCreatePaymentComand(&arg))
 		if err != nil {
 			var zero *domain.Payment
+			if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+				// This is a "Duplicate" error.
+				return zero, domain.ErrDuplicatePayment
+			}
 			return zero, err
 		}
 		return MapPayment(p), nil
@@ -214,6 +220,9 @@ func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg domain.Upd
 			PaidAmount: arg.PaidAmount,
 		})
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return 0, domain.ErrScheduleNotFound
+			}
 			return 0, err
 		}
 

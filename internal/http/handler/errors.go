@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"billing-api/internal/service"
+	"billing-api/internal/domain"
 	"context"
 	"encoding/json"
 	"errors"
@@ -61,16 +61,19 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 
 	// handle other errors
 	switch {
-	case errors.Is(err, service.ErrLoanNotFound):
+	case errors.Is(err, domain.ErrLoanNotFound):
 		logError(r, "loan_not_found", err)
 		http.Error(w, "Loan not found", http.StatusNotFound)
-	case errors.Is(err, service.ErrInvalidPayment):
+	case errors.Is(err, domain.ErrInvalidPayment):
 		logError(r, "invalid_payment_amount", err)
 		http.Error(w, "Invalid payment amount", http.StatusBadRequest)
-	case errors.Is(err, service.ErrLoanAlreadyClosed):
+	case errors.Is(err, domain.ErrLoanAlreadyClosed):
 		logError(r, "loan_already_closed", err)
 		http.Error(w, "Loan already closed", http.StatusConflict)
-	case errors.Is(err, service.ErrDuplicatePayment):
+	case errors.Is(err, domain.ErrScheduleNotFound):
+		logError(r, "schedule_not_found", err)
+		http.Error(w, "Schedule not found", http.StatusInternalServerError)
+	case errors.Is(err, domain.ErrDuplicatePayment):
 		logError(r, "payment_already_processed", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -78,7 +81,7 @@ func (h *Handler) HandleError(w http.ResponseWriter, r *http.Request, err error)
 			"status":  "success",
 			"message": "payment already processed",
 		})
-	case errors.Is(err, service.ErrDelinquencyCheck):
+	case errors.Is(err, domain.ErrDelinquencyCheck):
 		logError(r, "logic_error", err)
 		http.Error(w, "Failed to compute loan deliquency", http.StatusInternalServerError)
 	default:

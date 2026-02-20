@@ -156,7 +156,7 @@ func TestSubmitPayment_Mock(t *testing.T) {
 			Run(func(args mock.Arguments) {
 				fn := args.Get(1).(func(domain.BillingRepository) error)
 				_ = fn(mockRepo)
-			}).Return(ErrInvalidPayment)
+			}).Return(domain.ErrInvalidPayment)
 
 		mockRepo.On("GetTotalPaidAmount", mock.Anything, input.LoanID).Return(int64(0), nil).Once()
 

@@ -7,18 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-)
-
-var (
-	ErrLoanNotFound            = errors.New("Loan not found")
-	ErrInvalidStateOutstanding = errors.New("Invalid loan payment state")
-	ErrInvalidLoanTerms        = errors.New("Invalid loan terms")
-	ErrInvalidPayment          = errors.New("Invalid payment")
-	ErrLoanAlreadyClosed       = errors.New("Loan already fully paid")
-	ErrDuplicatePayment        = errors.New("Duplicate payment for current week")
-	ErrDelinquencyCheck        = errors.New("Failed to compute loan delinquency")
 )
 
 type BillingService struct {
@@ -42,7 +31,7 @@ func (s *BillingService) GetLoanByID(ctx context.Context, loanID int64) (*domain
 	// load loan
 	loan, err := s.repo.GetLoanByID(ctx, loanID)
 	if err != nil {
-		return nil, ErrLoanNotFound
+		return nil, domain.ErrLoanNotFound
 	}
 
 	return loan, nil
@@ -63,7 +52,7 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 
 	err := s.repo.WithTx(ctx, func(repo domain.BillingRepository) error {
 		if input.PrincipalAmount <= 0 || input.TotalWeeks <= 0 {
-			return ErrInvalidLoanTerms
+			return domain.ErrInvalidLoanTerms
 		}
 
 		// flat interest
@@ -121,7 +110,7 @@ GetOutstanding get total amount that user still need to pay
 func (s *BillingService) GetOutstanding(ctx context.Context, loanID int64) (int64, error) {
 	loan, err := s.repo.GetLoanByID(ctx, loanID)
 	if err != nil {
-		return 0, ErrLoanNotFound
+		return 0, domain.ErrLoanNotFound
 	}
 
 	totalPaid, err := s.repo.GetTotalPaidAmount(ctx, loanID)
@@ -132,7 +121,7 @@ func (s *BillingService) GetOutstanding(ctx context.Context, loanID int64) (int6
 	outstanding := loan.TotalPayableAmount - totalPaid
 	if outstanding < 0 {
 		// safety guard, to ack false behaviour
-		return 0, ErrInvalidStateOutstanding
+		return 0, domain.ErrInvalidStateOutstanding
 	}
 
 	return outstanding, nil
@@ -156,7 +145,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		// load loan
 		loan, err := repo.GetLoanByID(ctx, input.LoanID)
 		if err != nil {
-			return ErrLoanNotFound
+			return domain.ErrLoanNotFound
 		}
 
 		// check for outstanding
@@ -165,10 +154,10 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 			return err
 		}
 		if totalPaid > loan.TotalPayableAmount {
-			return ErrLoanAlreadyClosed
+			return domain.ErrLoanAlreadyClosed
 		}
 		if input.Amount != loan.WeeklyPaymentAmount {
-			return ErrInvalidPayment
+			return domain.ErrInvalidPayment
 		}
 
 		// determine next unpaid week
@@ -178,7 +167,7 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		}
 		nextWeek := paidWeeks + 1
 		if nextWeek > int32(loan.TotalWeeks) {
-			return ErrLoanAlreadyClosed
+			return domain.ErrLoanAlreadyClosed
 		}
 
 		payment, err := repo.InsertPayment(ctx, domain.CreatePaymentComand{
@@ -189,10 +178,6 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 			PaidAt:         input.PaidAt,
 		})
 		if err != nil {
-			if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-				// This is a "Duplicate" error.
-				return ErrDuplicatePayment
-			}
 			return err
 		}
 
@@ -229,13 +214,13 @@ func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now tim
 	// load loan
 	loan, err := s.repo.GetLoanByID(ctx, loanID)
 	if err != nil {
-		return false, ErrLoanNotFound
+		return false, domain.ErrLoanNotFound
 	}
 
 	// get loan last paid week
 	lastPaidWeek, err := s.repo.GetLastPaidWeek(ctx, loanID)
 	if err != nil {
-		return false, fmt.Errorf("%w %v", ErrDelinquencyCheck, err)
+		return false, fmt.Errorf("%w %v", domain.ErrDelinquencyCheck, err)
 	}
 
 	// the loan start date is assumed to be the loan creation timestamp, as the problem statement does not describe a separate approval or disbursement phase.
