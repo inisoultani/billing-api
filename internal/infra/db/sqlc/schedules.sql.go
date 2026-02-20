@@ -103,7 +103,7 @@ SET paid_amount = paid_amount + $2,
   END,
   updated_at = now()
 WHERE id = $1
-RETURNING id, loan_id, sequence, due_date, amount, paid_amount, status, created_at, updated_at
+RETURNING id
 `
 
 type UpdateSchedulePaymentParams struct {
@@ -111,19 +111,9 @@ type UpdateSchedulePaymentParams struct {
 	PaidAmount int64
 }
 
-func (q *Queries) UpdateSchedulePayment(ctx context.Context, arg UpdateSchedulePaymentParams) (Schedule, error) {
+func (q *Queries) UpdateSchedulePayment(ctx context.Context, arg UpdateSchedulePaymentParams) (int64, error) {
 	row := q.db.QueryRow(ctx, updateSchedulePayment, arg.ID, arg.PaidAmount)
-	var i Schedule
-	err := row.Scan(
-		&i.ID,
-		&i.LoanID,
-		&i.Sequence,
-		&i.DueDate,
-		&i.Amount,
-		&i.PaidAmount,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

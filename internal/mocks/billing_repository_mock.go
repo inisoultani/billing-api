@@ -87,9 +87,9 @@ func (m *MockBillingRepository) ListSchedulesByLoanID(ctx context.Context, arg d
 }
 
 // UpdateSchedulePayment mocks the schedule based on payment sequence
-func (m *MockBillingRepository) UpdateSchedulePayment(ctx context.Context, arg domain.UpdateLoanSchedulePaymentCommand) (domain.LoanSchedule, error) {
+func (m *MockBillingRepository) UpdateSchedulePayment(ctx context.Context, arg domain.UpdateLoanSchedulePaymentCommand) (int64, error) {
 	args := m.Called(ctx, arg)
-	return args.Get(0).(domain.LoanSchedule), args.Error(1)
+	return args.Get(0).(int64), args.Error(1)
 }
 
 // GetScheduleBySequence mocks the retrieval schedule based on sequence

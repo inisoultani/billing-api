@@ -206,18 +206,17 @@ func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg domain.Lis
 }
 
 // UpdateSchedulePayment update related schedule based payment sequence
-func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg domain.UpdateLoanSchedulePaymentCommand) (domain.LoanSchedule, error) {
-	return runWithTimeout(ctx, "Update schedule payment", 1, func(ctx context.Context) (domain.LoanSchedule, error) {
-		schedule, err := r.queries.UpdateSchedulePayment(ctx, sqlc.UpdateSchedulePaymentParams{
+func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg domain.UpdateLoanSchedulePaymentCommand) (int64, error) {
+	return runWithTimeout(ctx, "Update schedule payment", 1, func(ctx context.Context) (int64, error) {
+		id, err := r.queries.UpdateSchedulePayment(ctx, sqlc.UpdateSchedulePaymentParams{
 			ID:         arg.ID,
 			PaidAmount: arg.PaidAmount,
 		})
 		if err != nil {
-			var zero domain.LoanSchedule
-			return zero, err
+			return 0, err
 		}
 
-		return MapSchedule(schedule), nil
+		return id, nil
 	})
 }
 

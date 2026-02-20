@@ -133,7 +133,7 @@ func TestSubmitPayment_Mock(t *testing.T) {
 		mockRepo.On("UpdateSchedulePayment", mock.Anything, domain.UpdateLoanSchedulePaymentCommand{
 			ID:         mockScheduleID, // Matches the ID returned by GetScheduleBySequence
 			PaidAmount: input.Amount,
-		}).Return(domain.LoanSchedule{}, nil).Once()
+		}).Return(int64(11), nil).Once()
 
 		mockRepo.On("GetPaidWeeksCount", mock.Anything, input.LoanID).Return(int32(0), nil).Once()
 

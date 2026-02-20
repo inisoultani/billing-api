@@ -23,6 +23,6 @@ type BillingRepository interface {
 	// Schedule-related actions
 	CreateLoanSchedules(ctx context.Context, arg []LoanSchedule) (int64, error)
 	ListSchedulesByLoanID(ctx context.Context, arg ListScheduleQuery) ([]LoanSchedule, error)
-	UpdateSchedulePayment(ctx context.Context, arg UpdateLoanSchedulePaymentCommand) (LoanSchedule, error)
+	UpdateSchedulePayment(ctx context.Context, arg UpdateLoanSchedulePaymentCommand) (int64, error)
 	GetScheduleBySequence(ctx context.Context, arg GetLoanScheduleBySequenceQuery) (LoanSchedule, error)
 }

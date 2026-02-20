@@ -23,7 +23,7 @@ SET paid_amount = paid_amount + $2,
   END,
   updated_at = now()
 WHERE id = $1
-RETURNING *;
+RETURNING id;
 -- name: GetScheduleBySequence :one
 SELECT *
 FROM schedules
