@@ -62,13 +62,13 @@ func (m *MockBillingRepository) InsertPayment(ctx context.Context, arg domain.Cr
 }
 
 // ListPaymentsByLoanID mocks the paginated retrieval of payments.
-func (m *MockBillingRepository) ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPaymentsByLoanIDParams) ([]sqlc.ListPaymentsByLoanIDRow, error) {
+func (m *MockBillingRepository) ListPaymentsByLoanID(ctx context.Context, arg domain.ListPaymentsQuery) ([]domain.Payment, error) {
 	args := m.Called(ctx, arg)
 	// We use a type assertion for the slice. If nil is returned, we handle it.
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]sqlc.ListPaymentsByLoanIDRow), args.Error(1)
+	return args.Get(0).([]domain.Payment), args.Error(1)
 }
 
 // CreateLoanSchedule mocks the creation of schedules

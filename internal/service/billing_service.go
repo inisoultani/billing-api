@@ -2,7 +2,6 @@ package service
 
 import (
 	"billing-api/internal/domain"
-	"billing-api/internal/infra/db/repository"
 	"billing-api/internal/infra/db/sqlc"
 	"context"
 	"errors"
@@ -266,42 +265,28 @@ func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now tim
 /*
 ListPayments return all payment records based on loan id
 */
-func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit int, cursor *domain.PaymentCursor) ([]*domain.Payment, *domain.PaymentCursor, error) {
+func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit int, cursor *domain.PaymentCursor) ([]domain.Payment, *domain.PaymentCursor, error) {
 
-	params := sqlc.ListPaymentsByLoanIDParams{
+	query := domain.ListPaymentsQuery{
 		LoanID:   loanID,
 		LimitVal: int32(limit),
 	}
 	// ensure cursor not null or by default use nil as value for paidAt and id
 	if cursor != nil {
-		params.CursorPaidAt = pgtype.Timestamptz{
-			Time:  cursor.PaidAt,
-			Valid: true,
-		}
-		params.CursorID = pgtype.Int8{
-			Int64: cursor.ID,
-			Valid: true,
-		}
-	} else {
-		params.CursorPaidAt = pgtype.Timestamptz{Valid: false}
-		params.CursorID = pgtype.Int8{Valid: false}
+		query.CursorPaidAt = cursor.PaidAt
+		query.CursorID = &cursor.ID
 	}
 
-	rows, err := s.repo.ListPaymentsByLoanID(ctx, params)
+	payments, err := s.repo.ListPaymentsByLoanID(ctx, query)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	payments := make([]*domain.Payment, 0, len(rows))
-	for _, r := range rows {
-		payments = append(payments, repository.MapListPaymentsByLoanIDRow(r))
-	}
-
 	var nextCursor *domain.PaymentCursor
-	if len(rows) == limit {
-		last := rows[len(rows)-1]
+	if len(payments) == limit {
+		last := payments[len(payments)-1]
 		nextCursor = &domain.PaymentCursor{
-			PaidAt: last.PaidAt.Time,
+			PaidAt: last.PaidAt,
 			ID:     last.ID,
 		}
 	}

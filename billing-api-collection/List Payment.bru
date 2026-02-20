@@ -5,18 +5,18 @@ meta {
 }
 
 get {
-  url: {{protocol}}://{{host}}:{{port}}/loan/:loanID/payment?limit=3
+  url: {{protocol}}://{{host}}:{{port}}/loan/:loanID/payment?limit=2&cursor=eyJQYWlkQXQiOiIyMDI2LTAyLTE4VDE2OjQ0OjQ3Ljk2MDEyMloiLCJJRCI6NzV9
   body: none
   auth: inherit
 }
 
 params:query {
-  limit: 3
-  ~cursor: eyJQYWlkQXQiOiIyMDI2LTAyLTA4VDExOjQ5OjE1LjMwNzYxM1oiLCJJRCI6NTB9
+  limit: 2
+  cursor: eyJQYWlkQXQiOiIyMDI2LTAyLTE4VDE2OjQ0OjQ3Ljk2MDEyMloiLCJJRCI6NzV9
 }
 
 params:path {
-  loanID: 24
+  loanID: 46
 }
 
 settings {

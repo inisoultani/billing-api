@@ -56,7 +56,7 @@ type ListScheduleResponse struct {
 	NextCursor *string            `json:"next_cursor,omitempty"`
 }
 
-func ToListPaymentResponse(payments []*domain.Payment, nextCursor *string) ListPaymentResponse {
+func ToListPaymentResponse(payments []domain.Payment, nextCursor *string) ListPaymentResponse {
 	list := make([]PaymentResponse, len(payments))
 	for i, p := range payments {
 		list[i] = PaymentResponse{

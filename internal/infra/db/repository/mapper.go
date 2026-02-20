@@ -38,11 +38,12 @@ func MapPayment(p sqlc.Payment) *domain.Payment {
 		WeekNumber: int(p.WeekNumber),
 		Amount:     p.Amount,
 		PaidAt:     p.PaidAt.Time,
+		LoanID:     p.LoanID,
 	}
 }
 
-func MapListPaymentsByLoanIDRow(p sqlc.ListPaymentsByLoanIDRow) *domain.Payment {
-	return &domain.Payment{
+func MapListPaymentsByLoanIDRow(p sqlc.ListPaymentsByLoanIDRow) domain.Payment {
+	return domain.Payment{
 		ID:         p.ID,
 		WeekNumber: int(p.WeekNumber),
 		Amount:     p.Amount,

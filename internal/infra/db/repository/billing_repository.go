@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -128,9 +129,35 @@ func (r *PostgresRepo) InsertPayment(ctx context.Context, arg domain.CreatePayme
 }
 
 // ListPaymentsByLoanID handles paginated retrieval of payments
-func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg sqlc.ListPaymentsByLoanIDParams) ([]sqlc.ListPaymentsByLoanIDRow, error) {
-	return runWithTimeout(ctx, "List payments based on loanID", 1, func(ctx context.Context) ([]sqlc.ListPaymentsByLoanIDRow, error) {
-		return r.queries.ListPaymentsByLoanID(ctx, arg)
+func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg domain.ListPaymentsQuery) ([]domain.Payment, error) {
+	return runWithTimeout(ctx, "List payments based on loanID", 1, func(ctx context.Context) ([]domain.Payment, error) {
+		params := sqlc.ListPaymentsByLoanIDParams{
+			LoanID:   arg.LoanID,
+			LimitVal: int32(arg.LimitVal),
+		}
+		// ensure cursor not null or by default use nil as value for paidAt and id
+		if !arg.CursorPaidAt.IsZero() {
+			params.CursorPaidAt = pgtype.Timestamptz{
+				Time:  arg.CursorPaidAt,
+				Valid: true,
+			}
+			params.CursorID = pgtype.Int8{
+				Int64: *arg.CursorID,
+				Valid: true,
+			}
+		} else {
+			params.CursorPaidAt = pgtype.Timestamptz{Valid: false}
+			params.CursorID = pgtype.Int8{Valid: false}
+		}
+		paymentRows, err := r.queries.ListPaymentsByLoanID(ctx, params)
+		if err != nil {
+			return nil, err
+		}
+		payments := make([]domain.Payment, 0, len(paymentRows))
+		for _, r := range paymentRows {
+			payments = append(payments, MapListPaymentsByLoanIDRow(r))
+		}
+		return payments, nil
 	})
 }
 
