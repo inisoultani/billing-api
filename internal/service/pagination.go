@@ -1,4 +1,4 @@
-package domain
+package service
 
 import "time"
 
@@ -8,5 +8,5 @@ type PaymentCursor struct {
 }
 
 type ScheduleCursor struct {
-	Sequence int32 `json:"seq"`
+	Sequence int32
 }

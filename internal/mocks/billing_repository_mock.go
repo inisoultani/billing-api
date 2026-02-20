@@ -78,13 +78,13 @@ func (m *MockBillingRepository) CreateLoanSchedules(ctx context.Context, arg []d
 }
 
 // ListSchedulesByLoanID mocks the paginated retrieval of schedules
-func (m *MockBillingRepository) ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListSchedulesByLoanIDWithCursorParams) ([]sqlc.Schedule, error) {
+func (m *MockBillingRepository) ListSchedulesByLoanID(ctx context.Context, arg domain.ListScheduleQuery) ([]domain.LoanSchedule, error) {
 	args := m.Called(ctx, arg)
 	// We use a type assertion for the slice. If nil is returned, we handle it.
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]sqlc.Schedule), args.Error(1)
+	return args.Get(0).([]domain.LoanSchedule), args.Error(1)
 }
 
 // UpdateSchedulePayment mocks the schedule based on payment sequence

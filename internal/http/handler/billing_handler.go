@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"billing-api/internal/domain"
 	"billing-api/internal/service"
 	"context"
 	"encoding/json"
@@ -11,8 +10,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 )
-
-
 
 func (h *Handler) GetLoanByID(w http.ResponseWriter, r *http.Request) error {
 	loanIDStr := chi.URLParam(r, "loanID")
@@ -163,7 +160,7 @@ func (h *Handler) ListPayments(w http.ResponseWriter, r *http.Request) error {
 		limit = h.config.PagingLimitDefault
 	}
 
-	cursor, err := DecodeCursor[domain.PaymentCursor](r)
+	cursor, err := DecodeCursor[service.PaymentCursor](r)
 	if err != nil {
 		return BadRequest("Invalid payment cursor", err)
 	}
@@ -203,7 +200,7 @@ func (h *Handler) ListSchedules(w http.ResponseWriter, r *http.Request) error {
 		limit = h.config.PagingLimitDefault
 	}
 
-	cursor, err := DecodeCursor[domain.ScheduleCursor](r)
+	cursor, err := DecodeCursor[service.ScheduleCursor](r)
 	if err != nil {
 		return BadRequest("Invalid schedule cursor", err)
 	}

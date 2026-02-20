@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"billing-api/internal/infra/db/sqlc"
 	"time"
 )
 
@@ -15,21 +14,15 @@ type LoanSchedule struct {
 	Status     string
 }
 
+type ListScheduleQuery struct {
+	LoanID         int64
+	Limit          int32
+	CursorSequence int32
+}
+
 type CreateLoanScheduleCommand struct {
 	TotalWeek int
 	StartDate time.Time
 	LoanID    int64
 	Amount    int64
-}
-
-func MapSchedule(s sqlc.Schedule) *LoanSchedule {
-	return &LoanSchedule{
-		ID:         s.ID,
-		LoanID:     s.LoanID,
-		Sequence:   int(s.Sequence),
-		DueDate:    s.DueDate.Time,
-		Amount:     s.Amount,
-		PaidAmount: s.PaidAmount,
-		Status:     s.Status,
-	}
 }

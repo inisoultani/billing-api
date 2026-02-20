@@ -63,3 +63,15 @@ func MapCreatePaymentComand(cpc *domain.CreatePaymentComand) *sqlc.InsertPayment
 		},
 	}
 }
+
+func MapSchedule(s sqlc.Schedule) domain.LoanSchedule {
+	return domain.LoanSchedule{
+		ID:         s.ID,
+		LoanID:     s.LoanID,
+		Sequence:   int(s.Sequence),
+		DueDate:    s.DueDate.Time,
+		Amount:     s.Amount,
+		PaidAmount: s.PaidAmount,
+		Status:     s.Status,
+	}
+}

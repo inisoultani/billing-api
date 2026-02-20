@@ -187,9 +187,21 @@ func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []domain.Loa
 }
 
 // ListSchedulesByLoanID handle paginated retrieval of schedules
-func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListSchedulesByLoanIDWithCursorParams) ([]sqlc.Schedule, error) {
-	return runWithTimeout(ctx, "List schedule based on loan ID", 10, func(ctx context.Context) ([]sqlc.Schedule, error) {
-		return r.queries.ListSchedulesByLoanIDWithCursor(ctx, arg)
+func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg domain.ListScheduleQuery) ([]domain.LoanSchedule, error) {
+	return runWithTimeout(ctx, "List schedule based on loan ID", 10, func(ctx context.Context) ([]domain.LoanSchedule, error) {
+		schedules, err := r.queries.ListSchedulesByLoanIDWithCursor(ctx, sqlc.ListSchedulesByLoanIDWithCursorParams{
+			LoanID:   arg.LoanID,
+			Limit:    arg.Limit,
+			Sequence: arg.CursorSequence,
+		})
+		if err != nil {
+			return nil, err
+		}
+		loanSchedules := make([]domain.LoanSchedule, 0, len(schedules))
+		for _, r := range schedules {
+			loanSchedules = append(loanSchedules, MapSchedule(r))
+		}
+		return loanSchedules, nil
 	})
 }
 

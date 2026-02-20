@@ -264,7 +264,7 @@ func (s *BillingService) IsDelinquent(ctx context.Context, loanID int64, now tim
 /*
 ListPayments return all payment records based on loan id
 */
-func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit int, cursor *domain.PaymentCursor) ([]domain.Payment, *domain.PaymentCursor, error) {
+func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit int, cursor *PaymentCursor) ([]domain.Payment, *PaymentCursor, error) {
 
 	query := domain.ListPaymentsQuery{
 		LoanID:   loanID,
@@ -281,10 +281,10 @@ func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit i
 		return nil, nil, err
 	}
 
-	var nextCursor *domain.PaymentCursor
+	var nextCursor *PaymentCursor
 	if len(payments) == limit {
 		last := payments[len(payments)-1]
-		nextCursor = &domain.PaymentCursor{
+		nextCursor = &PaymentCursor{
 			PaidAt: last.PaidAt,
 			ID:     last.ID,
 		}
@@ -296,34 +296,29 @@ func (s *BillingService) ListPayments(ctx context.Context, loanID int64, limit i
 /*
 ListSchedules return all schedule records based on loan id
 */
-func (s *BillingService) ListSchedules(ctx context.Context, loanID int64, limit int, cursor *domain.ScheduleCursor) ([]*domain.LoanSchedule, *domain.ScheduleCursor, error) {
+func (s *BillingService) ListSchedules(ctx context.Context, loanID int64, limit int, cursor *ScheduleCursor) ([]domain.LoanSchedule, *ScheduleCursor, error) {
 
-	params := sqlc.ListSchedulesByLoanIDWithCursorParams{
-		LoanID:   loanID,
-		Limit:    int32(limit),
-		Sequence: 0, // Default to start from the beginning
+	params := domain.ListScheduleQuery{
+		LoanID:         loanID,
+		Limit:          int32(limit),
+		CursorSequence: 0, // Default to start from the beginning
 	}
 
 	if cursor != nil {
-		params.Sequence = cursor.Sequence
+		params.CursorSequence = cursor.Sequence
 	}
 
 	// Fetch using sequence-based pagination
-	rows, err := s.repo.ListSchedulesByLoanID(ctx, params)
+	schedules, err := s.repo.ListSchedulesByLoanID(ctx, params)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	schedules := make([]*domain.LoanSchedule, 0, len(rows))
-	for _, r := range rows {
-		schedules = append(schedules, domain.MapSchedule(r))
-	}
-
 	// Generate Next Cursor
-	var nextCursor *domain.ScheduleCursor
+	var nextCursor *ScheduleCursor
 	if len(schedules) == limit {
 		lastItem := schedules[len(schedules)-1]
-		nextCursor = &domain.ScheduleCursor{
+		nextCursor = &ScheduleCursor{
 			Sequence: int32(lastItem.Sequence),
 		}
 	}

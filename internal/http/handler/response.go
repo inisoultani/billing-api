@@ -92,7 +92,7 @@ func DecodeCursor[T any](r *http.Request) (*T, error) {
 }
 
 // ToListScheduleResponse maps domain models to the API response format
-func ToListScheduleResponse(schedules []*domain.LoanSchedule, nextCursor *string) ListScheduleResponse {
+func ToListScheduleResponse(schedules []domain.LoanSchedule, nextCursor *string) ListScheduleResponse {
 	list := make([]ScheduleResponse, len(schedules))
 	for i, s := range schedules {
 		list[i] = ScheduleResponse{
