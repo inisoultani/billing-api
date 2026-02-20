@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -92,15 +91,15 @@ func (s *BillingService) SubmitLoan(ctx context.Context, input SubmitLoanInput) 
 		}
 
 		// generate Schedules with batch insert instead of multiple insert
-		schedules := make([]sqlc.CreateLoanSchedulesParams, input.TotalWeeks)
+		schedules := make([]domain.LoanSchedule, input.TotalWeeks)
 
 		for i := 1; i <= input.TotalWeeks; i++ {
 			dueDate := input.StartDate.AddDate(0, 0, 7*i)
 
-			schedules[i-1] = sqlc.CreateLoanSchedulesParams{
+			schedules[i-1] = domain.LoanSchedule{
 				LoanID:   loan.ID,
-				Sequence: int32(i),
-				DueDate:  pgtype.Date{Time: dueDate, Valid: true},
+				Sequence: i,
+				DueDate:  dueDate,
 				Amount:   weeklyPayment,
 				Status:   "PENDING",
 			}

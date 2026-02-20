@@ -15,6 +15,13 @@ type LoanSchedule struct {
 	Status     string
 }
 
+type CreateLoanScheduleCommand struct {
+	TotalWeek int
+	StartDate time.Time
+	LoanID    int64
+	Amount    int64
+}
+
 func MapSchedule(s sqlc.Schedule) *LoanSchedule {
 	return &LoanSchedule{
 		ID:         s.ID,

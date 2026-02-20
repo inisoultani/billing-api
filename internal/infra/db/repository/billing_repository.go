@@ -163,7 +163,7 @@ func (r *PostgresRepo) ListPaymentsByLoanID(ctx context.Context, arg domain.List
 
 // SCHEDULE RELATED
 // CreateLoanSchedule record schedule during loan creation
-func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []sqlc.CreateLoanSchedulesParams) (int64, error) {
+func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []domain.LoanSchedule) (int64, error) {
 	// specifically set timeout for this particular process
 	// for insert loan in self there will dedicate timout
 	return runWithTimeout(ctx, "Batch insert schedule", len(arg), func(ctx context.Context) (int64, error) {
@@ -172,7 +172,17 @@ func (r *PostgresRepo) CreateLoanSchedules(ctx context.Context, arg []sqlc.Creat
 		// if err != nil {
 		// 	return 0, err
 		// }
-		return r.queries.CreateLoanSchedules(ctx, arg)
+		params := make([]sqlc.CreateLoanSchedulesParams, len(arg))
+		for i, s := range arg {
+			params[i] = sqlc.CreateLoanSchedulesParams{
+				LoanID:   s.LoanID,
+				Sequence: int32(i + 1),
+				DueDate:  pgtype.Date{Time: s.DueDate, Valid: true},
+				Amount:   s.Amount,
+				Status:   "PENDING",
+			}
+		}
+		return r.queries.CreateLoanSchedules(ctx, params)
 	})
 }
 

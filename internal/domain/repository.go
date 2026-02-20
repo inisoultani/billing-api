@@ -22,7 +22,7 @@ type BillingRepository interface {
 	ListPaymentsByLoanID(ctx context.Context, arg ListPaymentsQuery) ([]Payment, error)
 
 	// Schedule-related actions
-	CreateLoanSchedules(ctx context.Context, arg []sqlc.CreateLoanSchedulesParams) (int64, error)
+	CreateLoanSchedules(ctx context.Context, arg []LoanSchedule) (int64, error)
 	ListSchedulesByLoanID(ctx context.Context, arg sqlc.ListSchedulesByLoanIDWithCursorParams) ([]sqlc.Schedule, error)
 	UpdateSchedulePayment(ctx context.Context, arg sqlc.UpdateSchedulePaymentParams) (sqlc.Schedule, error)
 	GetScheduleBySequence(ctx context.Context, arg sqlc.GetScheduleBySequenceParams) (sqlc.Schedule, error)

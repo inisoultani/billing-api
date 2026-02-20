@@ -72,7 +72,7 @@ func (m *MockBillingRepository) ListPaymentsByLoanID(ctx context.Context, arg do
 }
 
 // CreateLoanSchedule mocks the creation of schedules
-func (m *MockBillingRepository) CreateLoanSchedules(ctx context.Context, arg []sqlc.CreateLoanSchedulesParams) (int64, error) {
+func (m *MockBillingRepository) CreateLoanSchedules(ctx context.Context, arg []domain.LoanSchedule) (int64, error) {
 	args := m.Called(ctx, arg)
 	return args.Get(0).(int64), args.Error(1)
 }
