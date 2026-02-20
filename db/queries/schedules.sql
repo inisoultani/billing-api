@@ -16,13 +16,14 @@ ORDER BY sequence
 LIMIT $3;
 -- name: UpdateSchedulePayment :one
 UPDATE schedules
-SET paid_amount = paid_amount + $2,
+SET paid_amount = paid_amount + $1,
   status = CASE
-    WHEN paid_amount + $2 >= amount THEN 'PAID'
+    WHEN paid_amount + $1 >= amount THEN 'PAID'
     ELSE 'PARTIAL'
   END,
   updated_at = now()
-WHERE id = $1
+WHERE loan_id = $2
+  AND sequence = $3
 RETURNING id;
 -- name: GetScheduleBySequence :one
 SELECT *

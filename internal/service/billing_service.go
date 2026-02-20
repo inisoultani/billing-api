@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -198,17 +197,9 @@ func (s *BillingService) SubmitPayment(ctx context.Context, input SubmitPaymentI
 		}
 
 		// Update the specific schedule record
-		// Use GetScheduleBySequence to find the ID instead of a manual loop
-		sch, err := repo.GetScheduleBySequence(ctx, domain.GetLoanScheduleBySequenceQuery{
-			LoanID:   input.LoanID,
-			Sequence: int32(nextWeek),
-		})
-		if err != nil {
-			return err
-		}
-		log.Printf("schedule id that going to be updated : %d\n", sch.ID)
 		_, err = repo.UpdateSchedulePayment(ctx, domain.UpdateLoanSchedulePaymentCommand{
-			ID:         sch.ID,
+			LoanID:     input.LoanID,
+			Sequence:   int32(nextWeek),
 			PaidAmount: input.Amount,
 		})
 		if err != nil {

@@ -91,9 +91,3 @@ func (m *MockBillingRepository) UpdateSchedulePayment(ctx context.Context, arg d
 	args := m.Called(ctx, arg)
 	return args.Get(0).(int64), args.Error(1)
 }
-
-// GetScheduleBySequence mocks the retrieval schedule based on sequence
-func (m *MockBillingRepository) GetScheduleBySequence(ctx context.Context, arg domain.GetLoanScheduleBySequenceQuery) (domain.LoanSchedule, error) {
-	args := m.Called(ctx, arg)
-	return args.Get(0).(domain.LoanSchedule), args.Error(1)
-}

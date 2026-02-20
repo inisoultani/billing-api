@@ -209,7 +209,8 @@ func (r *PostgresRepo) ListSchedulesByLoanID(ctx context.Context, arg domain.Lis
 func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg domain.UpdateLoanSchedulePaymentCommand) (int64, error) {
 	return runWithTimeout(ctx, "Update schedule payment", 1, func(ctx context.Context) (int64, error) {
 		id, err := r.queries.UpdateSchedulePayment(ctx, sqlc.UpdateSchedulePaymentParams{
-			ID:         arg.ID,
+			LoanID:     arg.LoanID,
+			Sequence:   arg.Sequence,
 			PaidAmount: arg.PaidAmount,
 		})
 		if err != nil {
@@ -218,23 +219,6 @@ func (r *PostgresRepo) UpdateSchedulePayment(ctx context.Context, arg domain.Upd
 
 		return id, nil
 	})
-}
-
-// GetScheduleBySequence retrieve schedule based on sequence
-func (r *PostgresRepo) GetScheduleBySequence(ctx context.Context, arg domain.GetLoanScheduleBySequenceQuery) (domain.LoanSchedule, error) {
-	return runWithTimeout(ctx, "GetScheduleBySequence", 1, func(ctx context.Context) (domain.LoanSchedule, error) {
-		schedule, err := r.queries.GetScheduleBySequence(ctx, sqlc.GetScheduleBySequenceParams{
-			LoanID:   arg.LoanID,
-			Sequence: arg.Sequence,
-		})
-		if err != nil {
-			var zero domain.LoanSchedule
-			return zero, err
-		}
-
-		return MapSchedule(schedule), nil
-	})
-
 }
 
 // timeout simulator
